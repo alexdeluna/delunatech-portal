@@ -1,0 +1,37 @@
+REGRAS DO FIRESTORE — DeLunaTech
+
+O painel administrativo lista também aplicativos ocultos. Por isso, a regra de leitura de /aplicacoes deve permitir leitura quando o documento está publicado OU quando a conta é administradora ativa.
+
+Substitua as regras atuais por estas regras no Firebase Console > Firestore Database > Regras e clique em Publicar:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function administradorAtivo() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/administradores/$(request.auth.uid))
+        && get(/databases/$(database)/documents/administradores/$(request.auth.uid)).data.ativo == true
+        && get(/databases/$(database)/documents/administradores/$(request.auth.uid)).data.perfil == "principal";
+    }
+
+    match /aplicacoes/{aplicacaoId} {
+      allow read: if administradorAtivo() || resource.data.publicado == true;
+      allow create, update, delete: if administradorAtivo();
+    }
+
+    match /administradores/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+IMPORTANTE:
+- O acesso administrativo ainda é validado no Firebase Authentication e pelo documento administradores/{UID} com ativo=true e perfil="principal".
+- Visitantes podem ler somente documentos cujo publicado seja true.
+- Consultas públicas futuras devem filtrar publicado == true.
+- Administradores podem consultar aplicativos publicados e ocultos.

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0B1026">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Administração | DeLunaTech</title>
+  <link rel="icon" href="assets/icons/icone-orbital.png">
+  <style>
+    :root{--navy:#0B1026;--blue:#2563FF;--cyan:#00D4FF;--paper:#F3F6FC;--ink:#111a35;--muted:#5c6680;--line:#dce3f0;--danger:#b42318;--success:#087443}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "Segoe UI",Arial,sans-serif}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+    .topbar{background:var(--navy);color:white;padding:18px max(5%,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--blue)}
+    .brand{font-size:1.25rem;font-weight:800;letter-spacing:.2px}.brand span{display:block;font-size:.78rem;color:var(--cyan);font-weight:500}
+    .shell{width:min(1180px,92%);margin:30px auto 60px}.login-card,.panel-card{background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 32px #0b10260c}
+    .login-card{width:min(440px,100%);margin:7vh auto;padding:32px}.login-card h1{margin:0 0 6px;font-size:1.65rem}.muted{color:var(--muted)}
+    label{display:block;font-weight:650;margin:14px 0 6px}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #b9c4d8;border-radius:8px;background:#fff;color:var(--ink)}input:focus,select:focus,textarea:focus{outline:3px solid #2563ff2a;border-color:var(--blue)}textarea{min-height:90px;resize:vertical}
+    .btn{border:0;border-radius:8px;padding:11px 16px;background:var(--blue);color:white;font-weight:700}.btn.secondary{background:#e8eefb;color:var(--navy)}.btn.danger{background:#fff0ef;color:var(--danger)}.btn.small{padding:7px 10px;font-size:.9rem}.btn.full{width:100%;margin-top:20px}
+    .message{min-height:24px;margin:14px 0 0;color:var(--muted);overflow-wrap:anywhere}.message.error{color:var(--danger)}.message.success{color:var(--success)}
+    .hidden{display:none!important}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}.toolbar h1{margin:0;font-size:clamp(1.5rem,3vw,2rem)}.toolbar p{margin:4px 0 0;color:var(--muted)}
+    .dashboard-grid{display:grid;grid-template-columns:minmax(300px,.9fr) minmax(0,1.3fr);gap:22px;align-items:start}.panel-card{padding:22px}.panel-card h2{font-size:1.2rem;margin:0 0 6px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.span-2{grid-column:1/-1}.checks{display:flex;flex-wrap:wrap;gap:18px;margin-top:16px}.checks label{display:flex;align-items:center;gap:8px;margin:0;font-weight:500}.checks input{width:auto}
+    .app-list{display:grid;gap:12px;margin-top:16px}.app-item{border:1px solid var(--line);border-radius:12px;padding:15px}.app-item-top{display:flex;justify-content:space-between;gap:12px;align-items:start}.app-item h3{margin:0;font-size:1.05rem}.app-meta{color:var(--muted);font-size:.9rem;margin:4px 0 10px}.pill{display:inline-block;border-radius:999px;padding:3px 9px;font-size:.78rem;font-weight:700;background:#edf1f8;color:#35415b}.pill.published{background:#e3f8ed;color:#087443}.pill.hidden-pill{background:#fff0d9;color:#8a4b00}.item-actions{display:flex;flex-wrap:wrap;gap:8px}
+    .list-tools{display:flex;gap:10px;margin-top:14px}.list-tools input{min-width:0}.empty{padding:24px 8px;color:var(--muted);text-align:center}.footnote{font-size:.88rem;color:var(--muted);margin:14px 0 0}
+    @media(max-width:850px){.dashboard-grid{grid-template-columns:1fr}.toolbar{align-items:flex-start}.topbar{padding:16px 4%}}
+    @media(max-width:520px){.shell{width:94%;margin-top:18px}.panel-card,.login-card{padding:20px}.toolbar{flex-direction:column}.form-grid{grid-template-columns:1fr}.span-2{grid-column:auto}.app-item-top{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">DeLunaTech <span>Tecnologia que simplifica.</span></div>
+    <button id="logout-button" class="btn secondary hidden" type="button">Sair</button>
+  </header>
+
+  <main class="shell">
+    <section id="login-view" class="login-card" aria-labelledby="login-title">
+      <h1 id="login-title">Painel administrativo</h1>
+      <p class="muted">Entre com a conta autorizada para gerenciar os aplicativos publicados no portal.</p>
+      <form id="login-form">
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" autocomplete="username" required>
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button class="btn full" type="submit">Entrar</button>
+      </form>
+      <p id="login-message" class="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="dashboard-view" class="hidden" aria-labelledby="dashboard-title">
+      <div class="toolbar">
+        <div><h1 id="dashboard-title">Catálogo de aplicativos</h1><p>Cadastre, edite e controle a publicação dos aplicativos.</p></div>
+        <button id="new-app-button" class="btn secondary" type="button">Novo aplicativo</button>
+      </div>
+      <div class="dashboard-grid">
+        <section id="editor-card" class="panel-card">
+          <h2 id="form-title">Cadastrar aplicativo</h2>
+          <p class="muted">Os aplicativos ficam ocultos até você marcar a opção de publicação.</p>
+          <form id="app-form">
+            <input id="app-id" type="hidden">
+            <div class="form-grid">
+              <div class="span-2"><label for="app-name">Nome *</label><input id="app-name" maxlength="100" required></div>
+              <div class="span-2"><label for="app-description">Descrição *</label><textarea id="app-description" maxlength="500" required></textarea></div>
+              <div><label for="app-category">Categoria *</label><select id="app-category" required><option value="Gestão">Gestão</option><option value="Produtividade">Produtividade</option><option value="Eventos">Eventos</option><option value="Utilitários">Utilitários</option><option value="Outros">Outros</option></select></div>
+              <div><label for="app-status">Status *</label><select id="app-status" required><option value="em breve">Em breve</option><option value="disponivel">Disponível</option><option value="suspenso">Suspenso</option></select></div>
+              <div class="span-2"><label for="app-url">URL do aplicativo</label><input id="app-url" type="url" inputmode="url" placeholder="https://..." maxlength="1000"></div>
+              <div><label for="app-icon">Ícone ou sigla</label><input id="app-icon" maxlength="100" placeholder="Ex.: CD ou assets/icons/cd.png"></div>
+              <div><label for="app-order">Ordem no catálogo</label><input id="app-order" type="number" min="0" step="1" value="10" required></div>
+            </div>
+            <div class="checks"><label><input id="app-published" type="checkbox"> Publicado no portal</label><label><input id="app-featured" type="checkbox"> Aplicativo em destaque</label></div>
+            <div class="item-actions" style="margin-top:20px"><button id="save-app-button" class="btn" type="submit">Salvar aplicativo</button><button id="cancel-edit-button" class="btn secondary hidden" type="button">Cancelar edição</button></div>
+            <p id="form-message" class="message" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="panel-card">
+          <h2>Aplicativos cadastrados</h2>
+          <p id="app-count" class="muted">Carregando catálogo…</p>
+          <div class="list-tools"><input id="app-search" type="search" placeholder="Buscar por nome ou categoria" aria-label="Buscar aplicativos"></div>
+          <div id="app-list" class="app-list" aria-live="polite"><p class="empty">Carregando…</p></div>
+          <p class="footnote">Ocultar um aplicativo não o exclui do banco. Excluir remove o registro permanentemente.</p>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

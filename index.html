@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0B1026">
+
+  <meta name="description" content="Conheça e experimente as aplicações da DeLunaTech. Tecnologia que simplifica.">
+
+  <title>DeLunaTech | Tecnologia que simplifica</title>
+
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+
+<body>
+  <header class="site-header">
+    
+<a class="brand" href="#inicio" aria-label="DeLunaTech - Página inicial">
+  <img
+    class="brand-logo"
+    src="assets/logos/logo-principal.png"
+    alt="DeLunaTech — Tecnologia que simplifica"
+  >
+</a>
+
+
+    <nav class="main-nav" aria-label="Navegação principal">
+      <a href="#inicio">Início</a>
+      <a href="#aplicacoes">Aplicações</a>
+      <a href="#sobre">Sobre</a>
+    </nav>
+
+    <a class="header-link" href="#aplicacoes">Explorar soluções</a>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-content">
+        <span class="eyebrow">SOLUÇÕES DIGITAIS</span>
+
+        <h1>Tecnologia que<br><span>simplifica.</span></h1>
+
+        <p>
+          Conheça nossas aplicações, explore suas funcionalidades
+          e descubra soluções digitais desenvolvidas para facilitar
+          tarefas do dia a dia.
+        </p>
+
+        <a class="button button-primary" href="#aplicacoes">
+          Explorar aplicações
+          <span aria-hidden="true">→</span>
+        </a>
+
+        <div class="hero-note">
+          <span class="status-dot" aria-hidden="true"></span>
+          Aplicações em demonstração e desenvolvimento contínuo
+        </div>
+      </div>
+
+      
+<div class="hero-visual" aria-label="Símbolo DeLunaTech com órbitas luminosas e esferas">
+        <img class="hero-orbital-art" src="assets/images/emblema-orbital-com-esferas.png" alt="" aria-hidden="true" loading="eager">
+
+        <div class="hero-feature-list" aria-label="Diferenciais DeLunaTech">
+          <article class="hero-feature">
+            <img class="hero-feature-icon" src="assets/images/icone-sua-ideia.png" alt="" aria-hidden="true" loading="eager">
+            <span><strong>Sua ideia, nosso projeto</strong><small>Você imagina a solução. Nós ajudamos a transformar sua ideia em realidade digital.</small></span>
+          </article>
+          <article class="hero-feature">
+            <img class="hero-feature-icon" src="assets/images/icone-mais-produtividade.png" alt="" aria-hidden="true" loading="eager">
+            <span><strong>Mais produtividade</strong><small>Processos mais simples e eficientes.</small></span>
+          </article>
+          <article class="hero-feature">
+            <img class="hero-feature-icon" src="assets/images/icone-solucoes-sob-medida.png" alt="" aria-hidden="true" loading="eager">
+            <span><strong>Soluções sob medida</strong><small>Desenvolvimento focado na sua realidade.</small></span>
+          </article>
+          <article class="hero-feature">
+            <img class="hero-feature-icon" src="assets/images/icone-tecnologia-confiavel.png" alt="" aria-hidden="true" loading="eager">
+            <span><strong>Tecnologia confiável</strong><small>Segurança e qualidade em cada projeto.</small></span>
+          </article>
+          <article class="hero-feature">
+            <img class="hero-feature-icon" src="assets/images/icone-aplicativo-personalizado.png" alt="" aria-hidden="true" loading="eager">
+            <span><strong>Seu aplicativo, do seu jeito</strong><small>Soluções desenvolvidas para atender às suas necessidades, seus processos e seus objetivos.</small></span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <div class="lower-content">
+      <section class="applications section" id="aplicacoes">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">NOSSO CATÁLOGO</span>
+          <h2>Explore as aplicações</h2>
+          <p>Encontre uma solução e conheça seus recursos.</p>
+        </div>
+
+        <span class="catalog-count" id="catalog-count">
+          Carregando aplicações...
+        </span>
+      </div>
+
+      <div class="catalog-tools">
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            id="search-apps"
+            placeholder="Pesquisar aplicações..."
+            aria-label="Pesquisar aplicações"
+          >
+        </label>
+
+        <label class="filter-label" for="filter-category">
+          Categoria
+          <select id="filter-category">
+            <option value="todas">Todas as categorias</option>
+          </select>
+        </label>
+      </div>
+
+      <div
+        class="app-grid"
+        id="app-grid"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <p class="loading-message">Carregando catálogo...</p>
+      </div>
+
+      <p class="catalog-disclaimer">
+        As aplicações disponibilizadas para teste podem estar em
+        desenvolvimento. Utilize somente dados fictícios nas
+        demonstrações públicas.
+      </p>
+    </section>
+
+   
+<section class="about-section" id="sobre">
+  <div class="about-content">
+    <span class="eyebrow">SOBRE A DELUNATECH</span>
+
+    <h2>Ideias transformadas em soluções digitais.</h2>
+
+    <p>
+      Desenvolvemos aplicações com foco em praticidade,
+      organização e experiências digitais acessíveis.
+      Nosso objetivo é simplificar processos por meio da tecnologia.
+    </p>
+  </div>
+</section>
+    </div>
+
+  </main>
+
+  
+
+
+<footer class="site-footer">
+  <div class="footer-content">
+    <p class="footer-slogan">Tecnologia que simplifica.</p>
+
+    <a class="footer-top-link" href="#inicio">
+      Voltar ao início ↑
+    </a>
+  </div>
+
+  <div class="footer-bottom">
+    <p>
+      © <span id="current-year"></span> DeLunaTech.
+      Todos os direitos reservados.
+    </p>
+  </div>
+</footer>
+
+
+
+</body>
+</html>

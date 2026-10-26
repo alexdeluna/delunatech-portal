@@ -1,0 +1,14 @@
+{
+  "name": "Anotações | DeLunaTech",
+  "short_name": "Anotações",
+  "description": "Aplicativo local de anotações. Tecnologia que simplifica.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F8FAFF",
+  "theme_color": "#0B1026",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "brand-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#0B1026">
+
+    <title>Anotações | DeLunaTech</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="brand-mark.svg">
+    <link rel="stylesheet" href="visual.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <div class="logo-icon" aria-hidden="true"><img src="brand-mark.svg" alt=""></div>
+
+                <div class="logo-texto">
+                    <strong>Anotações</strong>
+                    <span class="logo-marca">DeLuna<span>Tech</span></span>
+                    <small class="logo-slogan">Tecnologia que simplifica.</small>
+                </div>
+            </div>
+
+
+            <nav class="menu">
+
+                <button class="menu-item ativo" data-tela="inicio">
+                    <span>⌂</span>
+                    Início
+                </button>
+
+                <button class="menu-item" data-tela="anotacoes">
+                    <span>▤</span>
+                    Anotações
+                </button>
+
+                <button class="menu-item" data-tela="favoritos">
+                    <span>★</span>
+                    Favoritos
+                </button>
+
+                <button class="menu-item" data-tela="lixeira">
+                    <span>▱</span>
+                    Lixeira
+                </button>
+
+                <div class="menu-separador"></div>
+
+                <button class="menu-item" data-tela="backup">
+                    <span>↥</span>
+                    Backup
+                </button>
+
+                <button class="menu-item" id="btnRecarregar">
+                    <span>↻</span>
+                    Recarregar
+                </button>
+
+                <button class="menu-item" data-tela="configuracoes">
+                    <span>⚙</span>
+                    Configurações
+                </button>
+
+            </nav>
+
+
+            <div class="sidebar-assinatura">DEVELOPED BY <strong>DeLunaTech</strong></div>
+
+            <div class="sidebar-status">
+
+                <span class="status-dot"></span>
+
+                <div>
+                    <strong>Banco local</strong>
+                    <small id="statusBanco">Inicializando...</small>
+                </div>
+
+            </div>
+
+        </aside>
+
+
+        <!-- ÁREA PRINCIPAL -->
+        <main class="conteudo">
+
+            <section id="avisoAbaDuplicada" class="aviso-aba-duplicada" role="alert" aria-live="assertive" hidden>
+                <div class="aviso-aba-icone" aria-hidden="true">!</div>
+                <div class="aviso-aba-conteudo">
+                    <h2>Outra aba do Anotações está aberta</h2>
+                    <p>O banco de dados está sendo utilizado por outra aba ou janela deste navegador. Para proteger suas anotações, esta instância não será inicializada.</p>
+                    <div class="aviso-aba-instrucao">
+                        <strong>Como resolver</strong>
+                        <span>Feche a outra aba do Anotações e selecione Recarregar para tentar novamente. Seus dados não foram alterados por este aviso.</span>
+                    </div>
+                    <button type="button" class="btn-principal" id="btnRecarregarAviso">↻ Recarregar</button>
+                </div>
+            </section>
+
+            <header class="topbar">
+
+                <div>
+                    <h1 id="tituloTela">Início</h1>
+
+                    <p id="subtituloTela">
+                        Gerencie suas anotações.
+                    </p>
+                </div>
+
+
+                <div class="topbar-acoes">
+
+                    <button class="btn-secundario" id="btnTema" title="Alternar tema">
+                        ◐
+                    </button>
+
+                    <button class="btn-principal" id="btnNovaAnotacao">
+                        + Nova anotação
+                    </button>
+
+                </div>
+
+            </header>
+
+
+            <!-- BUSCA -->
+            <div class="barra-pesquisa">
+
+                <span>⌕</span>
+
+                <input type="search" id="campoBusca" placeholder="Pesquisar por número ou conteúdo..."
+                    autocomplete="off">
+
+            </div>
+
+
+            <!-- DASHBOARD -->
+            <section id="tela-inicio" class="tela ativa">
+
+                <div class="cards-resumo">
+
+                    <div class="card-resumo">
+
+                        <span>Total de anotações</span>
+
+                        <strong id="totalAnotacoes">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div class="card-resumo">
+
+                        <span>Favoritas</span>
+
+                        <strong id="totalFavoritos">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div class="card-resumo">
+
+                        <span>Na lixeira</span>
+
+                        <strong id="totalLixeira">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="secao">
+
+                    <div class="secao-cabecalho">
+
+                        <div>
+                            <h2>Anotações recentes</h2>
+                            <p>Últimos registros adicionados.</p>
+                        </div>
+
+                        <button class="btn-link" data-tela="anotacoes">
+                            Ver todas
+                        </button>
+
+                    </div>
+
+
+                    <div id="listaInicio" class="lista-anotacoes">
+
+                        <div class="estado-vazio">
+                            Nenhuma anotação cadastrada.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- ANOTAÇÕES -->
+            <section id="tela-anotacoes" class="tela">
+
+                <div class="secao">
+
+                    <div class="secao-cabecalho">
+
+                        <div>
+                            <h2>Todas as anotações</h2>
+                            <p>Consulte e gerencie seus registros.</p>
+                        </div>
+
+                        <button class="btn-principal" id="btnNovaAnotacaoLista">
+                            + Nova anotação
+                        </button>
+
+                    </div>
+
+
+                    <div id="listaAnotacoes" class="lista-anotacoes">
+
+                        <div class="estado-vazio">
+                            Nenhuma anotação cadastrada.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- FAVORITOS -->
+            <section id="tela-favoritos" class="tela">
+
+                <div class="secao">
+
+                    <div class="secao-cabecalho">
+
+                        <div>
+                            <h2>Favoritos</h2>
+                            <p>Anotações marcadas como importantes.</p>
+                        </div>
+
+                    </div>
+
+
+                    <div id="listaFavoritos" class="lista-anotacoes">
+
+                        <div class="estado-vazio">
+                            Nenhuma anotação favorita.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- LIXEIRA -->
+            <section id="tela-lixeira" class="tela">
+
+                <div class="secao">
+
+                    <div class="secao-cabecalho">
+
+                        <div>
+                            <h2>Lixeira</h2>
+                            <p>
+                                Anotações excluídas aguardando restauração
+                                ou exclusão definitiva.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div id="listaLixeira" class="lista-anotacoes">
+
+                        <div class="estado-vazio">
+                            A lixeira está vazia.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- BACKUP -->
+            <section id="tela-backup" class="tela">
+
+                <div class="secao">
+
+                    <div class="secao-cabecalho">
+
+                        <div>
+                            <h2>Backup</h2>
+                            <p>
+                                Proteja suas anotações contra perda acidental.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="backup-destaque">
+
+                        <div class="backup-icone">
+                            ↥
+                        </div>
+
+                        <div>
+
+                            <h3>Backup das anotações</h3>
+
+                            <p>
+                                Cada backup deverá gerar um novo arquivo
+                                contendo todos os registros existentes
+                                naquele momento.
+                            </p>
+
+                        </div>
+
+                        <button class="btn-principal" id="btnFazerBackup">
+                            Fazer backup
+                        </button>
+
+                        <button class="btn-principal" id="btnExportarExcel">
+                            Exportar para Excel
+                        </button>
+
+                        <button class="btn-principal" id="btnAtualizarBackups">
+                            Atualizar lista de backups
+                        </button>
+
+
+                    </div>
+
+                    <input type="file" id="arquivoBackup" accept=".json,application/json" hidden>
+
+                    <div class="acoes-restauracao">
+
+                        <button class="btn-secundario" id="btnSelecionarBackup">
+                            Selecionar backup para restaurar
+                        </button>
+
+                        <button class="btn-principal" id="btnRestaurarBackup" disabled>
+                            Restaurar backup selecionado
+                        </button>
+
+                    </div>
+
+                    <div id="infoBackupSelecionado" class="backup-selecionado">
+                    </div>
+
+
+                    <div class="secao-sub">
+
+                        <h3>Histórico de backups</h3>
+
+                        <div id="historicoBackups" class="lista-backups">
+
+                            <div class="estado-vazio">
+                                Nenhum backup realizado.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- CONFIGURAÇÕES -->
+            <section id="tela-configuracoes" class="tela">
+
+                <div class="secao">
+
+                    <div class="secao-cabecalho">
+
+                        <div>
+                            <h2>Configurações</h2>
+                            <p>Preferências do sistema.</p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="config-item">
+
+                        <div>
+                            <strong>Tema</strong>
+                            <small>
+                                Alternar entre tema claro e escuro.
+                            </small>
+                        </div>
+
+                        <button class="btn-secundario" id="btnTemaConfig">
+                            Alternar tema
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- MODAL NOVA ANOTAÇÃO -->
+    <div id="modalAnotacao" class="modal">
+
+        <div class="modal-conteudo">
+
+            <div class="modal-cabecalho">
+
+                <div>
+                    <h2>Nova anotação</h2>
+                    <p>Registre uma nova informação.</p>
+                </div>
+
+                <button class="btn-fechar" id="btnFecharModal">
+                    ×
+                </button>
+
+            </div>
+
+
+            <label for="textoAnotacao">
+                Anotação
+            </label>
+
+            <textarea id="textoAnotacao" placeholder="Digite sua anotação..." autofocus></textarea>
+
+
+            <div class="modal-acoes">
+
+                <button class="btn-secundario" id="btnCancelarModal">
+                    Cancelar
+                </button>
+
+                <button class="btn-principal" id="btnSalvar">
+                    Salvar anotação
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script type="module" src="app.js">
+    </script>
+
+</body>
+
+</html>

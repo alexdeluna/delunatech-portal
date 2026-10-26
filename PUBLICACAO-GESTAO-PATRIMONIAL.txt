@@ -1,0 +1,28 @@
+PUBLICAÇÃO — GESTÃO PATRIMONIAL
+
+O aplicativo foi integrado em /gestaopatrimonial/.
+URL prevista: https://www.delunatech.com.br/gestaopatrimonial/
+
+IMPORTANTE: o catálogo público carrega os aplicativos publicados a partir do Firestore.
+Depois de enviar estes arquivos ao GitHub Pages, entre no painel administrativo e cadastre/atualize o item:
+- Nome: Gestão Patrimonial
+- Categoria: Gestão
+- Descrição: Demonstração para cadastrar, consultar, transferir e acompanhar bens patrimoniais. Os dados ficam somente neste navegador.
+- Ícone: GP
+- Status: disponivel
+- URL: https://www.delunatech.com.br/gestaopatrimonial/
+- Publicado: ativado
+
+PRIVACIDADE DA DEMONSTRAÇÃO
+Os registros ficam no armazenamento local do navegador e não são sincronizados entre dispositivos. Use apenas dados fictícios. Limpar os dados do site pode apagar os registros.
+
+PASSOS PARA PUBLICAR
+1. Faça uma cópia de segurança do repositório atual.
+2. Extraia este ZIP. A pasta principal é delunatech-portal/.
+3. Copie o conteúdo dessa pasta para a raiz do repositório GitHub Pages, substituindo os arquivos correspondentes e mantendo o controle de versão.
+4. Confirme que a pasta gestaopatrimonial/ foi enviada junto com index.html, css/, js/, assets/, manifest.json e sw.js.
+5. Aguarde a atualização do GitHub Pages.
+6. Teste https://www.delunatech.com.br/gestaopatrimonial/ em uma janela anônima.
+7. Cadastre/atualize o card no painel administrativo, conforme os dados acima.
+
+O pacote não foi enviado ao GitHub; a publicação ainda depende do envio dos arquivos pelo proprietário do repositório.

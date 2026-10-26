@@ -27,10 +27,10 @@ const aplicacoes = [
     nome: "Gestão Patrimonial",
     categoria: "Gestão",
     descricao:
-      "Consulte bens patrimoniais, acompanhe localizações e organize informações dos ativos.",
+      "Demonstração para cadastrar, consultar, transferir e acompanhar bens patrimoniais. Os dados ficam somente neste navegador.",
     icone: "GP",
-    status: "em breve",
-    url: "",
+    status: "disponivel",
+    url: "https://www.delunatech.com.br/gestaopatrimonial/",
     destaque: true
   },
   {

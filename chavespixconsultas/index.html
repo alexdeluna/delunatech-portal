@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0B1026">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Chaves PIX">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#0B1026"
+    >
+
+    <meta
+        name="description"
+        content="Consulte e organize suas chaves PIX."
+    >
+
+    <title>Chaves PIX | DeLunaTech</title>
+
+    <link
+        rel="stylesheet"
+        href="visual.css"
+    >
+
+    <link
+        rel="manifest"
+        href="manifest.json"
+    >
+
+</head>
+
+
+<body>
+
+    <!-- ==================================================
+         APLICAÇÃO
+         ================================================== -->
+
+    <div id="app">
+
+
+        <!-- ==============================================
+             TELA DE LOGIN
+             ============================================== -->
+
+        <section
+            id="tela-login"
+            class="tela"
+        >
+
+            <div class="login-container">
+
+                <div class="logo-area">
+
+                    <div class="logo-icon">
+                        PIX
+                    </div>
+
+                    <h1>
+                        Minhas Chaves PIX
+                    </h1>
+
+                    <p>
+                        Organize e consulte suas chaves PIX com praticidade.
+                    </p>
+                    <p class="aviso-privacidade">Os registros ficam neste navegador, neste dispositivo. Não há sincronização online.</p>
+
+                </div>
+
+
+                <!-- LOGIN -->
+
+                <div id="form-login">
+
+                    <label for="login-email">
+                        Nome do perfil (opcional)
+                    </label>
+
+                    <input
+                        type="email"
+                        id="login-email"
+                        placeholder="Ex.: Meu controle pessoal"
+                        autocomplete="email"
+                    >
+
+
+                    <label for="login-senha" class="somente-leitor">Senha local desativada</label>
+
+                    <input
+                        type="password"
+                        id="login-senha"
+                        placeholder="Não utilizada no modo local"
+                        autocomplete="current-password"
+                    >
+
+
+                    <button
+                        type="button"
+                        id="btn-entrar"
+                    >
+                        ABRIR APLICATIVO
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="btn-google"
+                    >
+                        CONTINUAR COM GOOGLE
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="btn-criar-conta"
+                        class="botao-secundario"
+                    >
+                        CRIAR CONTA
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="btn-esqueci-senha"
+                        class="botao-texto"
+                    >
+                        ESQUECI MINHA SENHA
+                    </button>
+
+                </div>
+
+
+                <!-- MENSAGEM -->
+
+                <div
+                    id="mensagem-login"
+                    class="mensagem"
+                ></div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ==============================================
+             TELA PRINCIPAL
+             ============================================== -->
+
+        <section
+            id="tela-principal"
+            class="tela"
+            hidden
+        >
+
+            <header class="cabecalho">
+
+                <div class="cabecalho-marca">
+                    <img src="./assets/delunatech-logo.png" alt="DeLunaTech" class="logo-cabecalho">
+                    <h1>
+                        Minhas Chaves PIX
+                    </h1>
+
+                    <p id="usuario-email"></p>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="btn-logout"
+                >
+                    SAIR
+                </button>
+
+            </header>
+
+
+            <main class="conteudo-principal">
+
+
+                <!-- CONSULTAR -->
+
+                <button
+                    type="button"
+                    id="btn-consultar"
+                    class="card-menu"
+                >
+
+                    <span class="icone-menu">
+                        🔎
+                    </span>
+
+                    <span>
+
+                        <strong>
+                            Consultar chaves
+                        </strong>
+
+                        <small>
+                            Encontre uma chave PIX
+                        </small>
+
+                    </span>
+
+                </button>
+
+
+                <!-- CADASTRAR -->
+
+                <button
+                    type="button"
+                    id="btn-cadastrar"
+                    class="card-menu"
+                >
+
+                    <span class="icone-menu">
+                        +
+                    </span>
+
+                    <span>
+
+                        <strong>
+                            Cadastrar chave
+                        </strong>
+
+                        <small>
+                            Adicione uma pessoa e suas chaves
+                        </small>
+
+                    </span>
+
+                </button>
+
+
+                <!-- COMO USAR -->
+
+                <button
+                    type="button"
+                    id="btn-como-usar"
+                    class="card-menu"
+                >
+
+                    <span class="icone-menu">
+                        ?
+                    </span>
+
+                    <span>
+
+                        <strong>
+                            Como usar
+                        </strong>
+
+                        <small>
+                            Veja as instruções básicas
+                        </small>
+
+                    </span>
+
+                </button>
+
+
+                <!-- TEMA -->
+
+                <div class="tema-area">
+
+                    <span>
+                        Aparência
+                    </span>
+
+                    <button
+                        type="button"
+                        id="btn-tema"
+                    >
+                        MODO ESCURO
+                    </button>
+
+                </div>
+
+            </main>
+
+        </section>
+
+        <!-- ==================================================
+     TELA COMO USAR
+     ================================================== -->
+
+<section
+    id="tela-como-usar"
+    class="tela"
+    hidden
+>
+
+    <header class="cabecalho">
+
+        <div>
+
+            <h1>
+                Como usar
+            </h1>
+
+            <p>
+                Veja como utilizar o aplicativo.
+            </p>
+
+        </div>
+
+    </header>
+
+
+    <main class="conteudo-principal">
+
+        <div class="card-instrucao">
+
+            <h2>
+                Para que serve?
+            </h2>
+
+            <p>
+                Guarde suas chaves PIX em um só lugar
+                para encontrá-las rapidamente quando precisar.
+            </p>
+
+        </div>
+
+
+        <div class="card-instrucao">
+
+            <h2>
+                1. Cadastre
+            </h2>
+
+            <p>
+                Cadastre o nome da pessoa, a chave PIX
+                e o banco ao qual essa chave pertence.
+            </p>
+
+        </div>
+
+
+        <div class="card-instrucao">
+
+            <h2>
+                2. Consulte
+            </h2>
+
+            <p>
+                Pesquise pelo nome da pessoa para
+                encontrar rapidamente suas chaves.
+            </p>
+
+        </div>
+
+
+        <div class="card-instrucao">
+
+            <h2>
+                3. Confira o banco
+            </h2>
+
+            <p>
+                Cada chave aparece junto com o banco.
+                Assim você escolhe a conta correta.
+            </p>
+
+        </div>
+
+
+        <div class="card-instrucao">
+
+            <h2>
+                4. Copie
+            </h2>
+
+            <p>
+                Toque em COPIAR CHAVE e depois
+                cole no aplicativo do seu banco.
+            </p>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="btn-voltar-como-usar"
+        >
+            VOLTAR
+        </button>
+
+    </main>
+
+</section>
+
+<!-- ==================================================
+     TELA CADASTRAR CHAVE
+     ================================================== -->
+
+<section
+    id="tela-cadastro"
+    class="tela"
+    hidden
+>
+
+    <header class="cabecalho">
+
+        <div>
+
+            <h1>
+                Cadastrar chave
+            </h1>
+
+            <p>
+                Selecione uma pessoa ou cadastre uma nova.
+            </p>
+
+        </div>
+
+    </header>
+
+
+    <main class="conteudo-principal">
+
+        <div class="card-formulario">
+
+            <label for="cadastro-nome">
+                Pesquisar pessoa
+            </label>
+
+            <input
+                type="text"
+                id="cadastro-nome"
+                placeholder="Digite o nome da pessoa"
+                autocomplete="off"
+            >
+
+            <div
+                id="resultado-cadastro-pessoas"
+                class="resultado-cadastro-pessoas"
+            ></div>
+
+
+            <div
+                id="pessoa-selecionada"
+                class="pessoa-selecionada"
+                hidden
+            ></div>
+
+
+            <label for="cadastro-chave">
+                Chave PIX
+            </label>
+
+            <input
+                type="text"
+                id="cadastro-chave"
+                placeholder="Digite a chave PIX"
+                autocomplete="off"
+                spellcheck="false"
+            >
+
+            <div
+                id="tipo-detectado"
+                class="tipo-detectado"
+            ></div>
+
+
+            <label for="cadastro-banco">
+                Banco
+            </label>
+
+            <input
+                type="text"
+                id="cadastro-banco"
+                placeholder="Ex.: Banco do Brasil"
+                autocomplete="off"
+            >
+
+
+            <button
+                type="button"
+                id="btn-salvar-chave"
+            >
+                SALVAR CHAVE
+            </button>
+
+
+            <button
+                type="button"
+                id="btn-voltar-cadastro"
+                class="botao-secundario"
+            >
+                VOLTAR
+            </button>
+
+
+            <div
+                id="mensagem-cadastro"
+                class="mensagem"
+            ></div>
+
+        </div>
+
+    </main>
+
+</section>
+
+<section id="tela-consulta" class="tela" hidden>
+
+    <header class="cabecalho">
+        <div>
+            <h1>Consultar chaves</h1>
+            <p>Encontre uma pessoa para ver suas chaves PIX.</p>
+        </div>
+    </header>
+
+    <main class="conteudo-principal">
+
+        <div class="card-formulario">
+
+            <label for="consulta-nome">
+                Pesquisar pessoa
+            </label>
+
+            <input
+                type="text"
+                id="consulta-nome"
+                placeholder="Digite o nome"
+                autocomplete="off"
+            >
+
+        </div>
+
+        <div id="resultado-pessoas"></div>
+
+        <div id="resultado-chaves"></div>
+
+        <button
+            type="button"
+            id="btn-voltar-consulta"
+            class="botao-secundario"
+        >
+            VOLTAR
+        </button>
+
+    </main>
+
+</section>
+
+
+    </div>
+
+
+    <!-- ==================================================
+         JAVASCRIPT
+         ================================================== -->
+
+    <script
+        type="module"
+        src="app.js"
+    ></script>
+
+</body>
+
+</html>

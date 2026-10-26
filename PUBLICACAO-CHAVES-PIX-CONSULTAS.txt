@@ -1,0 +1,33 @@
+PUBLICAÇÃO — CHAVES PIX CONSULTAS | DeLunaTech
+
+Endereço planejado: https://www.delunatech.com.br/chavespixconsultas/
+Pasta: chavespixconsultas/
+
+ALTERAÇÕES REALIZADAS
+1. Arquivos do aplicativo copiados para delunatech-portal/chavespixconsultas/.
+   Motivo: publicar o app como subdiretório independente no portal.
+2. chavespixconsultas/sw.js — isolamento de cache corrigido.
+   - Antes: na ativação, o Service Worker apagava todos os caches do mesmo domínio, inclusive os que poderiam pertencer ao Anotações, Gestão Patrimonial ou ao portal.
+   - Depois: remove somente caches cujo nome começa com "delunatech-chaves-pix-", mantendo os caches dos outros aplicativos.
+   - Nome do cache atualizado de delunatech-chaves-pix-v9 para delunatech-chaves-pix-v10 para forçar a atualização do shell deste app.
+   Motivo: evitar interferência entre aplicativos independentes hospedados no mesmo domínio.
+
+ARQUIVOS DO APLICATIVO NÃO ALTERADOS
+index.html, app.js, auth.js, db.js, visual.css, manifest.json, ícones e imagens foram copiados sem alterações em relação ao ZIP original.
+O manifest.json já usa start_url "./" e scope "./", e os recursos/registro do Service Worker usam caminhos relativos, adequados ao subdiretório /chavespixconsultas/.
+
+ARQUIVOS DO PORTAL
+Nenhum arquivo central do portal foi alterado nesta integração. O catálogo é gerido pelo painel administrativo/Firestore; o novo card deve ser cadastrado lá após publicar os arquivos.
+
+CADASTRO SUGERIDO NO PAINEL ADMINISTRATIVO
+Nome: Chaves PIX Consultas
+Categoria: Organização Pessoal (ou a categoria equivalente existente)
+Descrição: Cadastre e consulte pessoas e suas chaves PIX em um espaço local neste dispositivo.
+Ícone: PIX
+URL: https://www.delunatech.com.br/chavespixconsultas/
+Status/publicação: disponível/ativo, conforme os campos existentes no painel.
+
+OBSERVAÇÕES E VALIDAÇÃO
+- O app usa localStorage para os dados locais; não há sincronização online. Os dados ficam associados ao navegador/dispositivo e podem ser perdidos se os dados do site forem apagados.
+- O pacote foi inspecionado e os caminhos relativos foram conferidos. Não foi publicado remotamente nem foi possível validar o funcionamento no domínio ao vivo nesta etapa.
+- Depois do envio ao GitHub Pages, testar abrir o endereço, criar um perfil local, cadastrar/consultar uma chave fictícia, recarregar a página e confirmar que os dados continuam disponíveis. Testar também o modo escuro e a instalação PWA, se oferecida pelo navegador.

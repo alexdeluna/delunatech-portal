@@ -1,4 +1,3 @@
-const CACHE_PREFIX = "delunatech-patrimonial-local-";
 const CACHE_NAME = "delunatech-patrimonial-local-v2";
 const APP_SHELL = [
   "./", "./index.html", "./css/style.css", "./js/app.js", "./js/db.js",
@@ -11,7 +10,7 @@ self.addEventListener("install", event => {
   self.skipWaiting();
 });
 self.addEventListener("activate", event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map(key => caches.delete(key)))));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));
   self.clients.claim();
 });
 self.addEventListener("fetch", event => {

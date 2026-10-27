@@ -8,6 +8,7 @@ const STORAGE_KEY = "delunatech.gestao-patrimonial.demo.v1";
 const MASTER = ["bens", "categorias", "responsaveis", "setores", "locais", "andares", "unidades"];
 
 const DEMO_VERSION = "delunatech-demo-seed-v1";
+const MONEY_MIGRATION_VERSION = "money-cents-v1";
 function buildDemoDataset() {
   const unidades = [
     {ID_Unidade:"U-REC",Nome_Unidade:"Unidade Recife",Cidade:"Recife",Estado:"PE"},
@@ -25,7 +26,7 @@ function buildDemoDataset() {
   const sectorNames=["Tecnologia da Informação","Recursos Humanos","Financeiro","Administrativo","Atendimento","Compras","Patrimônio","Jurídico","Operações","Diretoria","Comunicação","Arquivo","Engenharia","Suporte Técnico","Planejamento","Logística","Contabilidade","Protocolo","Infraestrutura","Sala de Reuniões"];
   const first=["Ana","Bruno","Camila","Daniel","Eduarda","Felipe","Gabriela","Henrique","Isabela","João","Karen","Lucas","Mariana","Nicolas","Olívia","Paulo","Rafaela","Samuel","Tatiana","Vinícius"];
   const last=["Almeida","Barbosa","Carvalho","Dias","Esteves","Ferreira","Gomes","Lima","Moura","Nunes","Oliveira","Pereira","Queiroz","Ramos","Santos","Teixeira","Vieira","Xavier","Araújo","Costa"];
-  for(let i=0;i<20;i++) responsaveis.push({ID_Responsavel:`R-${String(i+1).padStart(3,'0')}`,Nome_Completo:`${first[i]} ${last[(i*3)%20]}`,Email:`responsavel${i+1}@exemplo.invalid`});
+  for(let i=0;i<20;i++) responsaveis.push({ID_Responsavel:`R-${String(i+1).padStart(3,'0')}`,Nome_Completo:`${first[i]} ${last[(i*3)%20]}`,Email:`responsavel${i+1}@exemplo.invalid`,ID_Setor_Vinculo:`S-${String(i+1).padStart(3,'0')}`});
   for(let i=0;i<20;i++) {
     const u=unidades[i%3], floorList=floorsByUnit.get(u.ID_Unidade), floor=floorList[Math.min(floorList.length-1,Math.floor(i/3)%floorList.length)];
     const localId=`L-${String(i+1).padStart(3,'0')}`;
@@ -41,12 +42,23 @@ function buildDemoDataset() {
   for(let i=0;i<300;i++) {
     const m=models[i%models.length], catIndex=i<65?0:i<110?1:i<130?2:i<155?3:i<220?4:5;
     const sectorIndex=i%20, sector=setores[sectorIndex], person=responsaveis[sectorIndex], unit=unidades[sectorIndex%3];
-    bens.push({Tombamento:String(5200007000+i),Descricao_Bem:m[0],ID_Categoria:categorias[catIndex].ID_Categoria,ID_Setor:sector.ID_Setor,ID_Responsavel:person.ID_Responsavel,Situacao:"Ativo",Marca:m[1],Modelo:m[2],Numero_Serie:`DLT-${String(10000+i)}`,Data_Aquisicao:`202${i%6}-0${i%9+1}-15`,Valor_Aquisicao:[3200,780,1450,5600,900,90,65,420,2400,1100][i%10],Observacoes:"Registro fictício para demonstração pública.",_demoBase:true});
+    bens.push({Tombamento:String(5200007000+i),Descricao_Bem:m[0],ID_Categoria:categorias[catIndex].ID_Categoria,ID_Setor:sector.ID_Setor,ID_Responsavel:person.ID_Responsavel,Situacao:"Ativo",Marca:m[1],Modelo:m[2],Numero_Serie:`DLT-${String(10000+i)}`,Data_Aquisicao:`202${i%6}-0${i%9+1}-15`,Valor_Aquisicao:[320000,78000,145000,560000,90000,9000,6500,42000,240000,110000][i%10],Observacoes:"Registro fictício para demonstração pública.",_demoBase:true});
   }
   return {unidades,andares,locais,setores,responsaveis,categorias,bens};
 }
 export async function ensureDemoSeed() {
   const store=readStore();
+  // Migração única: os registros anteriores armazenavam reais (ex.: 3200 = R$ 3.200,00).
+  // Converte para centavos sem substituir outros campos ou coleções.
+  if (store._moneyMigrationVersion !== MONEY_MIGRATION_VERSION) {
+    if (Array.isArray(store.bens)) store.bens = store.bens.map(asset => {
+      if (asset.Valor_Aquisicao === null || asset.Valor_Aquisicao === undefined || asset.Valor_Aquisicao === "") return asset;
+      const n = Number(asset.Valor_Aquisicao);
+      return Number.isFinite(n) ? { ...asset, Valor_Aquisicao: Math.round(n * 100) } : asset;
+    });
+    store._moneyMigrationVersion = MONEY_MIGRATION_VERSION;
+    writeStore(store);
+  }
   if(store._demoSeedVersion===DEMO_VERSION) return false;
   if(rows(store,"bens").length) { store._demoSeedVersion=DEMO_VERSION; writeStore(store); return false; }
   const d=buildDemoDataset();
@@ -99,6 +111,8 @@ export async function importInitialDataset(dataset) {
 }
 export async function deleteTestMasterData() { const store = readStore(); for (const name of MASTER) store[name] = []; writeStore(store); }
 export async function recordAssetTransfer({ asset, destinationSector, destinationResponsible, reason, notes }) {
+  if (!destinationSector?.ID_Setor || !(destinationSector?.ID_Local_Atual ?? destinationSector?.ID_Local_Referencia)) throw new Error("O setor de destino precisa possuir uma localização válida.");
+  if (!destinationResponsible?.ID_Responsavel) throw new Error("O setor de destino não possui responsável associado. Corrija o cadastro antes de transferir.");
   const store = readStore(); const id = String(asset.Tombamento);
   const currentAsset = rows(store,"bens").find(item => String(item.Tombamento) === id);
   if (!currentAsset) throw new Error("O bem selecionado não foi encontrado na base local.");

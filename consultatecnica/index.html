@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0A1E4A">
+  <meta name="description" content="Base local de procedimentos técnicos da DeLunaTech.">
+  <title>Consulta Técnica | DeLunaTech</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icon-brand.png" type="image/png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <img class="brand-logo" src="assets/delunatech-logo.png" alt="DeLunaTech — Tecnologia que simplifica.">
+  <div class="brand-copy"><strong>Consulta Técnica</strong><span>Base de conhecimento profissional</span></div>
+  <button class="icon-button" id="settingsBtn" aria-label="Configurações" title="Configurações">⚙</button>
+</header>
+
+<main class="app-shell">
+  <section id="inlinePanel" class="inline-panel" hidden aria-live="polite"></section>
+
+  <section id="homeView" class="view active">
+    <div class="welcome">
+      <div><p class="eyebrow">SUA BASE DE CONHECIMENTO</p><h1>O que você precisa<br>consultar hoje?</h1></div>
+      <div class="welcome-icon">⌕</div>
+    </div>
+    <label class="searchbox"><span>⌕</span><input id="homeSearch" type="search" placeholder="Pesquisar procedimentos..." autocomplete="off"><button id="clearHomeSearch" aria-label="Limpar pesquisa">×</button></label>
+    <div class="quick-grid">
+      <button class="quick-card blue" data-action="new"><span class="quick-icon">＋</span><strong>Novo procedimento</strong><small>Documentar uma solução</small></button>
+      <button class="quick-card teal" data-action="categories"><span class="quick-icon">▦</span><strong>Categorias</strong><small>Organizar por assunto</small></button>
+      <button class="quick-card purple" data-action="backup"><span class="quick-icon">↥</span><strong>Backup e restauração</strong><small>Proteja seus registros</small></button>
+      <button class="quick-card orange" data-action="export"><span class="quick-icon">▤</span><strong>Exportar para Excel</strong><small>Gerar planilha CSV</small></button>
+    </div>
+    <div class="section-heading"><div><p class="eyebrow">VISÃO GERAL</p><h2>Seu acervo técnico</h2></div></div>
+    <div class="stats-grid">
+      <div class="stat-card"><span>Total de procedimentos</span><strong id="statProcedures">0</strong></div>
+      <div class="stat-card"><span>Categorias</span><strong id="statCategories">0</strong></div>
+      <div class="stat-card"><span>Com imagens</span><strong id="statImages">0</strong></div>
+      <div class="stat-card"><span>Adicionados recentemente</span><strong id="statRecent">0</strong></div>
+    </div>
+    <div class="section-heading"><div><p class="eyebrow">ACESSO RÁPIDO</p><h2>Consultas recentes</h2></div><button class="text-button" data-action="list">Ver todos</button></div>
+    <div id="recentList" class="procedure-list"></div>
+    <div id="homeEmpty" class="empty-state"><div class="empty-symbol">＋</div><h3>Comece seu acervo técnico</h3><p>Registre o primeiro procedimento e adicione imagens para consultar depois, mesmo sem internet.</p><button class="primary-button" data-action="new">Criar procedimento</button></div>
+  </section>
+
+  <section id="listView" class="view">
+    <div class="page-title"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">ACERVO</p><h1>Procedimentos</h1></div><button class="icon-button" data-action="new" aria-label="Novo procedimento">＋</button></div>
+    <label class="searchbox"><span>⌕</span><input id="listSearch" type="search" placeholder="Pesquisar por título, conteúdo..."></label>
+    <div id="categoryChips" class="chips"></div>
+    <div class="list-meta" id="listMeta">0 procedimentos</div>
+    <div id="allProcedures" class="procedure-list"></div>
+    <div id="listEmpty" class="empty-state compact"><div class="empty-symbol">⌕</div><h3>Nenhum procedimento encontrado</h3><p>Tente outro termo ou cadastre um novo procedimento.</p><button class="primary-button" data-action="new">Novo procedimento</button></div>
+  </section>
+
+  <section id="formView" class="view">
+    <div class="page-title"><button class="back-button" data-action="back">‹</button><div><p class="eyebrow">DOCUMENTAÇÃO TÉCNICA</p><h1 id="formHeading">Novo procedimento</h1></div></div>
+    <form id="procedureForm">
+      <input type="hidden" id="editId">
+      <div class="form-card">
+        <label class="field"><span>Título <b>*</b></span><input id="title" required maxlength="140" placeholder="Ex.: Configurar impressora de rede"></label>
+        <label class="field"><span>Categoria <b>*</b></span><select id="category" required></select></label>
+        <label class="field"><span>Objetivo</span><textarea id="objective" rows="2" maxlength="500" placeholder="O que este procedimento resolve?"></textarea></label>
+        <label class="field"><span>Problema ou contexto</span><textarea id="problem" rows="3" placeholder="Descreva a situação encontrada..."></textarea></label>
+        <label class="field"><span>Procedimento passo a passo <b>*</b></span><textarea id="steps" rows="7" required placeholder="1. Acesse ...&#10;2. Selecione ...&#10;3. Confirme ..."></textarea><small>Descreva as etapas na ordem em que devem ser executadas.</small></label>
+        <label class="field"><span>Resultado esperado</span><textarea id="result" rows="2" placeholder="Como confirmar que funcionou?"></textarea></label>
+        <label class="field"><span>Palavras-chave</span><input id="keywords" placeholder="impressora, rede, driver (separe por vírgulas)"></label>
+        <label class="field"><span>Observações</span><textarea id="notes" rows="3" placeholder="Cuidados, exceções ou informações adicionais..."></textarea></label>
+      </div>
+      <div class="form-card">
+        <div class="section-heading inline"><div><p class="eyebrow">REFERÊNCIAS VISUAIS</p><h2>Imagens anexadas</h2></div><span class="counter-pill" id="imageCount">0 imagens</span></div>
+        <p class="helper-text">Adicione capturas de tela ou fotos. As imagens ficam salvas neste dispositivo junto ao procedimento.</p>
+        <label class="upload-area" for="imageInput"><span class="upload-symbol">＋</span><strong>Adicionar imagens</strong><small>JPG, PNG, WEBP • até 5 MB por imagem</small><input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple></label>
+        <div id="imagePreviewGrid" class="image-preview-grid"></div>
+      </div>
+      <div class="form-actions"><button type="button" class="secondary-button" data-action="back">Cancelar</button><button type="submit" class="save-button">Salvar procedimento</button></div>
+      <p id="formMessage" class="form-message" role="status"></p>
+    </form>
+  </section>
+
+  <section id="detailView" class="view">
+    <div class="page-title"><button class="back-button" data-action="back">‹</button><div><p class="eyebrow" id="detailCode">PROCEDIMENTO</p><h1 id="detailTitle">Detalhes</h1></div><button class="icon-button" id="editProcedureBtn" aria-label="Editar">✎</button></div>
+    <div id="detailContent"></div>
+  </section>
+
+  <section id="categoriesView" class="view">
+    <div class="page-title"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">ORGANIZAÇÃO</p><h1>Categorias</h1></div></div>
+    <div class="form-card"><label class="field"><span>Nova categoria</span><div class="inline-input"><input id="newCategory" maxlength="50" placeholder="Ex.: Sistemas internos"><button class="primary-button" id="addCategoryBtn" type="button">Adicionar</button></div></label></div>
+    <div id="categoryEditor" class="form-card category-editor" hidden></div>
+    <div id="categoryList" class="category-list"></div>
+    <p class="helper-text">Categorias usadas por procedimentos não podem ser excluídas. Edite o procedimento para movê-lo para outra categoria.</p>
+  </section>
+
+  <section id="backupView" class="view">
+    <div class="page-title"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">SEGURANÇA DOS DADOS</p><h1>Backup e restauração</h1></div></div>
+    <div class="feature-card"><div class="feature-icon green">↓</div><h2>Exportar backup completo</h2><p>Gera um arquivo JSON com procedimentos, categorias, identificadores e imagens anexadas.</p><button class="primary-button full" id="backupExportBtn">Exportar backup</button></div>
+    <div class="feature-card"><div class="feature-icon purple">↑</div><h2>Restaurar de um backup</h2><p>Importa um arquivo de backup criado por este aplicativo. A restauração mescla os registros por identificador e não substitui automaticamente os dados atuais.</p><label class="primary-button full file-button">Selecionar arquivo<input id="backupInput" type="file" accept=".json,application/json"></label></div>
+    <div class="notice-card"><strong>Importante</strong><p>Os dados ficam neste navegador e dispositivo. Faça backups periódicos e guarde uma cópia em local seguro. O backup contém todas as imagens e pode ficar grande.</p></div>
+    <p id="backupMessage" class="form-message" role="status"></p>
+  </section>
+
+  <section id="exportView" class="view">
+    <div class="page-title"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">RELATÓRIOS</p><h1>Exportar para Excel</h1></div></div>
+    <div class="feature-card"><div class="feature-icon green">▤</div><h2>Planilha de procedimentos</h2><p>Gera um arquivo CSV que pode ser aberto no Excel. Inclui dados textuais e a quantidade de imagens; os arquivos de imagem ficam disponíveis no backup completo.</p><div class="export-columns"><span>Número</span><span>Título</span><span>Categoria</span><span>Objetivo</span><span>Procedimento</span><span>Resultado</span><span>Palavras-chave</span><span>Data de criação</span><span>Quantidade de imagens</span></div><button class="primary-button full" id="csvExportBtn">Gerar planilha CSV</button></div>
+    <p id="exportMessage" class="form-message" role="status"></p>
+  </section>
+
+  <section id="settingsView" class="view">
+    <div class="page-title"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">PREFERÊNCIAS</p><h1>Configurações</h1></div></div>
+    <div class="settings-group"><h2>Aparência</h2><label class="setting-row"><span><strong>Tema</strong><small>Escolha o estilo visual</small></span><select id="themeSelect"><option value="light">Claro</option><option value="dark">Escuro</option><option value="system">Automático</option></select></label><label class="setting-row"><span><strong>Tamanho do texto</strong><small>Melhore a leitura em campo</small></span><select id="fontSelect"><option value="normal">Padrão</option><option value="large">Grande</option></select></label></div>
+    <div class="settings-group"><h2>Dados</h2><button class="setting-link" data-action="categories"><span>▦</span><span><strong>Gerenciar categorias</strong><small>Organize os assuntos</small></span><b>›</b></button><button class="setting-link" data-action="backup"><span>↥</span><span><strong>Backup e restauração</strong><small>Exportar ou importar dados</small></span><b>›</b></button><button class="setting-link danger" id="clearDataBtn"><span>⌫</span><span><strong>Apagar todos os dados</strong><small>Esta ação não pode ser desfeita sem backup</small></span><b>›</b></button></div>
+    <div class="about-card"><img class="about-logo" src="assets/delunatech-logo.png" alt="DeLunaTech"><div><strong>Consulta Técnica DeLunaTech</strong><p>Versão 1.0.0 • Armazenamento local</p><small>Tecnologia que simplifica.</small></div></div>
+  </section>
+</main>
+
+<nav class="bottom-nav" aria-label="Navegação principal">
+  <button class="nav-item active" data-action="home"><span>⌂</span><small>Início</small></button>
+  <button class="nav-item" data-action="list"><span>▤</span><small>Procedimentos</small></button>
+  <button class="nav-item nav-add" data-action="new"><span>＋</span><small>Novo</small></button>
+  <button class="nav-item" data-action="categories"><span>▦</span><small>Categorias</small></button>
+  <button class="nav-item" data-action="backup"><span>↥</span><small>Backup</small></button>
+</nav>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

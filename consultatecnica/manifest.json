@@ -1,0 +1,18 @@
+{
+  "name": "Consulta Técnica DeLunaTech",
+  "short_name": "Consulta Técnica",
+  "description": "Base local de procedimentos técnicos com imagens.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F6FC",
+  "theme_color": "#0A1E4A",
+  "icons": [
+    {
+      "src": "assets/icon-brand.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

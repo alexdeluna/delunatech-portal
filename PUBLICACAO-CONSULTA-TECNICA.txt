@@ -1,0 +1,31 @@
+PUBLICAÇÃO — CONSULTA TÉCNICA | DeLunaTech
+
+URL pública pretendida: https://www.delunatech.com.br/consultatecnica/
+Origem informada pelo usuário: https://alexdeluna.github.io/Consulta-T-cnica/
+
+ARQUIVOS
+- Aplicativo integrado na pasta /consultatecnica/.
+- O restante do portal foi preservado a partir do ZIP recebido.
+- O service worker do Consulta Técnica foi ajustado para apagar somente caches com o prefixo dt-consulta-tecnica-, evitando apagar caches dos outros aplicativos no mesmo domínio.
+
+PASSOS DE PUBLICAÇÃO
+1. Extraia o conteúdo deste ZIP e publique/sincronize a pasta delunatech-portal-main com o repositório GitHub Pages do portal, preservando a estrutura de diretórios.
+2. No painel administrativo do portal, cadastre uma aplicação com estes dados:
+   Nome: Consulta Técnica
+   Categoria sugerida: Suporte Técnico
+   Descrição: Consulte, organize e documente procedimentos técnicos em uma base de conhecimento local, com pesquisa, imagens, backup e exportação para planilha.
+   Ícone: CT
+   Status: disponivel
+   URL: https://www.delunatech.com.br/consultatecnica/
+   Publicado: sim
+   Destaque: conforme sua preferência
+   Ordem: escolha uma posição adequada no catálogo
+3. Salve e confira a página inicial do portal e o endereço do aplicativo.
+
+IMPORTANTE
+O catálogo público atual lê os aplicativos publicados do Firestore (coleção aplicacoes). A inclusão dos arquivos no repositório, sozinha, não cria automaticamente o card no portal. O registro acima deve ser criado pelo admin.html. Este ZIP não altera configuração, credenciais nem dados do Firebase.
+
+VALIDAÇÃO
+- A pasta consultatecnica contém index.html, manifest.json, sw.js, css/, js/ e assets/.
+- O aplicativo usa IndexedDB para os procedimentos e localStorage para preferências; não foi encontrada dependência de Firebase no código do aplicativo.
+- Não foi feito deploy para o GitHub nem alteração remota do Firestore.

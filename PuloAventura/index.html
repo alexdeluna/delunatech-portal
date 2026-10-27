@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1026">
+  <meta name="description" content="Pulo Aventura: corra, salte obstáculos e desbloqueie novas fases.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="visual.css">
+  <title>Pulo Aventura | DeLunaTech</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">DL</span><span><strong>DeLunaTech</strong><small>ARCADE • PWA</small></span></div>
+      <button id="soundBtn" class="icon-btn" aria-label="Ativar ou desativar som" title="Som">♫</button>
+    </header>
+
+    <section class="game-card">
+      <div class="game-heading">
+        <div><p class="eyebrow">JOGO DE PLATAFORMA</p><h1>Pulo Aventura</h1></div>
+        <div class="level-pill">FASE <span id="levelNum">1</span></div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat"><span>PONTOS</span><strong id="score">0</strong></div>
+        <div class="stat"><span>META DA FASE</span><strong id="target">200</strong></div>
+        <div class="stat"><span>VIDAS</span><strong id="lives">♥ ♥ ♥</strong></div>
+      </div>
+
+      <div class="game-frame">
+        <canvas id="gameCanvas" width="960" height="420" aria-label="Área do jogo Pulo Aventura"></canvas>
+        <div id="overlay" class="overlay">
+          <div class="overlay-card">
+            <div class="hero-avatar">🧢</div>
+            <p class="eyebrow">PREPARE-SE PARA CORRER</p>
+            <h2 id="overlayTitle">Sua aventura começa aqui!</h2>
+            <p id="overlayText">Salte as caixas e pedras. Alcance a pontuação mínima para liberar a próxima fase.</p>
+            <div id="choiceActions" class="choice-actions"></div>
+            <button id="mainBtn" class="primary-btn">Começar jogo <span>→</span></button>
+          </div>
+        </div>
+        <div class="game-hint">ESPAÇO / ↑ / TOQUE PARA PULAR</div>
+      </div>
+
+      <div class="controls">
+        <button id="jumpBtn" class="jump-btn" aria-label="Pular">PULAR <span>↑</span></button>
+        <button id="pauseBtn" class="secondary-btn" disabled>Ⅱ Pausar</button>
+        <button id="restartBtn" class="secondary-btn">↻ Reiniciar</button>
+      </div>
+      <div class="bonus-teaser">
+        <div class="bonus-lock" id="bonusLock">?</div>
+        <div><p class="eyebrow">SEGREDO DESBLOQUEÁVEL</p><strong id="bonusTitle">Uma fase bônus espera por você</strong>
+        <p id="bonusCopy">Conclua as 10 fases da campanha para descobrir um novo modo de plataforma, com movimento livre e tesouros escondidos.</p></div>
+        <span class="bonus-tag" id="bonusTag">10 FASES</span>
+      </div>
+      <div class="progress-block">
+        <div class="progress-label"><span>Progresso da fase</span><strong id="progressText">0 / 200</strong></div>
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <article class="info-card">
+        <div class="section-title"><span class="title-icon">★</span><h2>Como jogar</h2></div>
+        <ul class="instructions">
+          <li><span>01</span> Pule para desviar dos obstáculos.</li>
+          <li><span>02</span> Cada obstáculo superado vale pontos.</li>
+          <li><span>03</span> Complete a meta para liberar a próxima fase.</li>
+        </ul>
+      </article>
+      <article class="info-card">
+        <div class="section-title"><span class="title-icon">↗</span><h2>Sua jornada</h2></div>
+        <div class="journey">
+          <div class="journey-item active"><b>1</b><span>Floresta</span></div>
+          <div class="journey-line"></div>
+          <div class="journey-item" id="journey2"><b>2</b><span>Deserto</span></div>
+          <div class="journey-line"></div>
+          <div class="journey-item" id="journey3"><b>3</b><span>Selva</span></div>
+          <div class="journey-line"></div>
+          <div class="journey-item" id="journey4"><b>4+</b><span>Desafio</span></div>
+        </div>
+        <p class="best-score">Recorde local: <strong id="bestScore">0</strong> pontos</p>
+      </article>
+    </section>
+    <footer>Um jogo experimental da <strong>DeLunaTech</strong> · Tecnologia que simplifica.</footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

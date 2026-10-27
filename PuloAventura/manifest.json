@@ -1,0 +1,12 @@
+{
+  "name": "Pulo Aventura - DeLunaTech",
+  "short_name": "Pulo Aventura",
+  "description": "Corra, salte obstáculos e desbloqueie novas fases.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0b1026",
+  "theme_color": "#0b1026",
+  "icons": []
+}

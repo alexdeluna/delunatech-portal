@@ -1,0 +1,21 @@
+ITSM PORTAL — ACE FLUTUANTE (DEMONSTRAÇÃO LOCAL)
+
+O assistente ACE aparece como um botão flutuante apenas quando o visitante entra no perfil Usuário.
+
+Fluxo implementado:
+1. O visitante pode informar/editar nome, unidade e departamento.
+2. Seleciona um serviço do catálogo local do ITSM.
+3. Seleciona uma subcategoria ativa.
+4. Descreve a solicitação em texto livre; se houver descrição sugerida configurada no catálogo, ela é oferecida como ponto de partida.
+5. Confere os dados e confirma a abertura.
+6. O chamado é gravado no mesmo armazenamento local utilizado pelo ITSM, para que possa ser visto nas telas de Usuário, Técnico e Administrador no mesmo navegador.
+
+Arquivos adicionados:
+- ace-widget.js: interface e fluxo conversacional do assistente.
+- ace-widget.css: estilo do botão flutuante e painel.
+
+Arquivos modificados:
+- index.html: inclui o CSS do assistente.
+- app.js: monta o assistente no perfil Usuário e conecta a abertura de chamados ao armazenamento local compartilhado.
+
+Não há integração com API de IA nem chamada ao Firebase no fluxo do widget. A conversa é guiada e utiliza o catálogo configurado no próprio portal. Os dados permanecem no navegador. Esta é uma demonstração; não inserir informações confidenciais ou dados reais sensíveis.

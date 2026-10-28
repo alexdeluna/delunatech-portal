@@ -1,0 +1,9 @@
+ITSM Portal — edição local para DeLunaTech
+
+1. Envie o conteúdo desta pasta para a pasta de publicação do app.
+2. Mantenha index.html, app.js, auth.js, styles.css e sla.css juntos.
+3. Teste os três perfis em um navegador.
+4. Confirme que chamados criados no perfil Usuário aparecem na fila do Técnico e nas telas do Administrador.
+5. Os dados ficam apenas no navegador atual. Use somente dados fictícios.
+
+Nota: esta edição não autentica usuários; os perfis são seletores de demonstração.

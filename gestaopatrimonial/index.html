@@ -111,19 +111,15 @@
             </div>
           </div>
           <form id="transferForm">
-            <label for="transferAssetSearch">Pesquisar patrimônio</label>
-            <input id="transferAssetSearch" type="search" placeholder="Tombamento, série, descrição, marca, modelo, setor ou responsável" autocomplete="off">
-            <label for="transferAsset">Bem patrimonial</label>
-            <select id="transferAsset" required><option value="">Carregando bens...</option></select>
+            <label for="transferAssetSearch">Pesquisar bem patrimonial</label>
+            <input id="transferAssetSearch" type="search" autocomplete="off" placeholder="Digite tombamento, série, descrição, marca, modelo, setor ou responsável">
+            <div id="transferAssetResults" class="search-results" role="listbox" aria-label="Resultados de bens para transferência"></div>
+            <select id="transferAsset" class="search-source-select" required aria-label="Bem patrimonial selecionado"><option value="">Selecione um bem</option></select>
             <div id="transferOrigin" class="notice"><strong>Origem atual</strong><p>Selecione um bem para consultar a origem.</p></div>
-            <fieldset class="destination-cascade"><legend>Destino da transferência</legend>
-              <div class="asset-form-grid">
-                <div><label for="transferUnit">1. Unidade</label><select id="transferUnit" required><option value="">Selecione a unidade</option></select></div>
-                <div><label for="transferFloor">2. Pavimento</label><select id="transferFloor" required disabled><option value="">Selecione a unidade primeiro</option></select></div>
-                <div><label for="transferPlace">3. Ambiente</label><select id="transferPlace" required disabled><option value="">Selecione o pavimento primeiro</option></select></div>
-                <div><label for="transferSector">4. Setor de destino</label><select id="transferSector" required disabled><option value="">Selecione o ambiente primeiro</option></select></div>
-              </div>
-            </fieldset>
+            <label for="transferSectorSearch">Pesquisar setor de destino</label>
+            <input id="transferSectorSearch" type="search" autocomplete="off" placeholder="Digite o nome do setor, unidade, andar ou sala">
+            <div id="transferSectorResults" class="search-results" role="listbox" aria-label="Resultados de setores de destino"></div>
+            <select id="transferSector" class="search-source-select" required aria-label="Setor de destino selecionado"><option value="">Selecione o setor de destino</option></select>
             <div id="transferDestination" class="notice"><strong>Destino</strong><p>Selecione um setor para consultar sua localização.</p></div>
             <label for="transferReason">Motivo da transferência</label>
             <select id="transferReason" required>
@@ -140,7 +136,7 @@
             <div class="button-row">
               <button id="confirmTransferBtn" class="button button-primary" type="submit">Revisar e confirmar transferência</button>
             </div>
-            <p id="transferMessage" class="message" role="status"></p><div class="button-row"><button id="generateTransferTermBtn" class="button button-secondary" type="button" hidden>Gerar termo de transferência (PDF)</button></div>
+            <p id="transferMessage" class="message" role="status"></p>
           </form>
         </div>
       </section>
@@ -155,10 +151,10 @@
             <p>A baixa altera a situação do bem para “Baixado”, registra o motivo e preserva o tombamento e o histórico. O registro não poderá ser excluído pelo portal.</p>
           </div>
           <form id="disposalForm">
-            <label for="disposalAssetSearch">Pesquisar patrimônio</label>
-            <input id="disposalAssetSearch" type="search" placeholder="Tombamento, série, descrição, marca, modelo, setor ou responsável" autocomplete="off">
-            <label for="disposalAsset">Bem patrimonial</label>
-            <select id="disposalAsset" required><option value="">Carregando bens...</option></select>
+            <label for="disposalAssetSearch">Pesquisar bem patrimonial</label>
+            <input id="disposalAssetSearch" type="search" autocomplete="off" placeholder="Digite tombamento, série, descrição, marca, modelo, setor ou responsável">
+            <div id="disposalAssetResults" class="search-results" role="listbox" aria-label="Resultados de bens para baixa patrimonial"></div>
+            <select id="disposalAsset" class="search-source-select" required aria-label="Bem patrimonial selecionado"><option value="">Selecione um bem</option></select>
             <div id="disposalAssetSummary" class="notice"><strong>Bem selecionado</strong><p>Selecione um bem para consultar seus dados.</p></div>
             <label for="disposalReason">Motivo da baixa</label>
             <select id="disposalReason" required>
@@ -216,10 +212,9 @@
           <p>Quando um setor mudar de sala, andar ou unidade, altere a localização do setor uma única vez. Os bens vinculados passarão a exibir a nova localização, e a alteração ficará registrada no histórico.</p>
           <form id="sectorLocationForm">
             <label for="locationSectorSearch">Pesquisar setor</label>
-            <input id="locationSectorSearch" type="search" placeholder="Digite o nome do setor para localizar" autocomplete="off">
-            <label for="locationSectorSelect">Setor</label>
-            <select id="locationSectorSelect" required><option value="">Selecione um setor</option></select>
-            <small id="locationSectorSearchHint" class="field-hint">Digite parte do nome para reduzir a lista de setores.</small>
+            <input id="locationSectorSearch" type="search" autocomplete="off" placeholder="Digite o nome do setor ou parte dele">
+            <div id="locationSectorResults" class="search-results" role="listbox" aria-label="Resultados de setores"></div>
+            <select id="locationSectorSelect" class="search-source-select" required aria-label="Setor selecionado"><option value="">Selecione um setor</option></select>
             <div id="sectorLocationCurrent" class="notice"><strong>Localização atual</strong><p>Selecione um setor.</p></div>
             <div class="asset-form-grid">
               <div><label for="locationUnitSelect">Unidade / edifício *</label><select id="locationUnitSelect" required><option value="">Selecione</option></select></div>
@@ -251,16 +246,13 @@
             <input type="hidden" id="assetEditingTombamento">
             <div class="asset-form-grid">
               <div><label for="newAssetTombamento">Tombamento *</label><input id="newAssetTombamento" required inputmode="numeric" maxlength="40" placeholder="Número patrimonial"></div>
-              <div><label for="newAssetSerial">Número de série</label><input id="newAssetSerial" maxlength="100"></div>
-              <div><label for="newAssetCategory">Categoria *</label><select id="newAssetCategory" required><option value="">Selecione</option></select></div>
               <div><label for="newAssetDescription">Descrição *</label><input id="newAssetDescription" required maxlength="200" placeholder="Descrição do bem"></div>
+              <div><label for="newAssetCategory">Categoria *</label><select id="newAssetCategory" required><option value="">Selecione</option></select></div>
               <div><label for="newAssetStatus">Situação</label><input id="newAssetStatus" value="Ativo" readonly></div>
               <div><label for="newAssetBrand">Marca</label><input id="newAssetBrand" maxlength="100"></div>
               <div><label for="newAssetModel">Modelo</label><input id="newAssetModel" maxlength="100"></div>
-              <div><label for="newAssetUnit">Unidade *</label><select id="newAssetUnit" required><option value="">Selecione a unidade</option></select></div>
-              <div><label for="newAssetFloor">Pavimento *</label><select id="newAssetFloor" required disabled><option value="">Selecione a unidade primeiro</option></select></div>
-              <div><label for="newAssetPlace">Ambiente *</label><select id="newAssetPlace" required disabled><option value="">Selecione o pavimento primeiro</option></select></div>
-              <div><label for="newAssetSector">Setor *</label><select id="newAssetSector" required disabled><option value="">Selecione o ambiente primeiro</option></select></div>
+              <div><label for="newAssetSerial">Número de série</label><input id="newAssetSerial" maxlength="100"></div>
+              <div><label for="newAssetSector">Setor *</label><select id="newAssetSector" required><option value="">Selecione</option></select></div>
               <div><label for="newAssetResponsible">Responsável *</label><select id="newAssetResponsible" required><option value="">Selecione</option></select></div>
               <div><label for="newAssetAcquisitionDate">Data de aquisição</label><input id="newAssetAcquisitionDate" type="date"></div>
               <div><label for="newAssetAcquisitionValue">Valor de aquisição (R$)</label><input id="newAssetAcquisitionValue" inputmode="decimal" placeholder="0,00"></div>

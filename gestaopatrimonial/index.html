@@ -31,12 +31,46 @@
         
         <button class="nav-tab" data-view="assetFormView" id="assetFormNavTab">Cadastrar Bem</button>
         <button class="nav-tab" data-view="referenceView" id="referenceNavTab">Cadastros Básicos</button>
+        <button class="nav-tab" data-view="institutionalView" id="institutionalNavTab">Configurações Institucionais</button>
         <button class="nav-tab" data-view="assetsView">Bens Patrimoniais</button>
         <button class="nav-tab" data-view="transferView">Transferir Bem</button>
         <button class="nav-tab" data-view="sectorLocationView" id="sectorLocationNavTab">Localização dos setores</button>
         <button class="nav-tab" data-view="disposalView" id="disposalNavTab">Baixa patrimonial</button>
+        <button class="nav-tab" data-view="operationsSearchView" id="operationsSearchNavTab">Consultar operações</button>
         <button class="nav-tab" data-view="reportView">Relatório Geral</button>
         </nav>
+
+      <section id="institutionalView" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">ADMINISTRAÇÃO PATRIMONIAL</p><h2>Configurações institucionais</h2><p class="section-description">Configure o responsável pelo Patrimônio e as pessoas autorizadas a emitir termos de transferência.</p></div></div>
+        <div class="panel">
+          <section class="institutional-settings panel" aria-labelledby="institutionalSettingsTitle">
+            <h3 id="institutionalSettingsTitle">Configurações institucionais</h3>
+            <p>Defina o gestor patrimonial e mantenha a lista de pessoas autorizadas a emitir termos de transferência. Os dados ficam salvos neste navegador.</p>
+            <form id="institutionalSettingsForm">
+              <div class="reference-fields">
+                <div><label for="patrimonyManagerName">Nome do responsável pelo Patrimônio</label><input id="patrimonyManagerName" required maxlength="120" placeholder="Digite o nome do responsável cadastrado" autocomplete="off" aria-autocomplete="list" aria-expanded="false"><div id="patrimonyManagerSuggestions" class="responsible-suggestions" hidden></div></div>
+                <div><label for="patrimonyManagerRole">Cargo ou função</label><input id="patrimonyManagerRole" maxlength="120" placeholder="Ex.: Gestor do Patrimônio"></div>
+                <div><label for="patrimonyManagerUnit">Unidade de atuação</label><input id="patrimonyManagerUnit" maxlength="120" placeholder="Unidade administrativa"></div>
+                <div><label for="patrimonyManagerRegistration">Matrícula funcional (opcional)</label><input id="patrimonyManagerRegistration" maxlength="60"></div>
+              </div>
+              <div class="button-row"><button class="button button-primary" type="submit">Salvar responsável pelo Patrimônio</button></div>
+              <p id="institutionalSettingsMessage" class="message" role="status"></p>
+            </form>
+            <hr>
+            <h4>Emissores autorizados a gerar transferências</h4>
+            <form id="transferIssuerForm">
+              <div class="reference-fields">
+                <div><label for="issuerName">Nome completo</label><input id="issuerName" required maxlength="120" placeholder="Digite o nome do responsável cadastrado" autocomplete="off" aria-autocomplete="list" aria-expanded="false"><div id="issuerNameSuggestions" class="responsible-suggestions" hidden></div></div>
+                <div><label for="issuerRole">Cargo ou função</label><input id="issuerRole" required maxlength="120" placeholder="Ex.: Assistente administrativo"></div>
+                <div><label for="issuerRegistration">Matrícula (opcional)</label><input id="issuerRegistration" maxlength="60"></div>
+              </div>
+              <div class="button-row"><button class="button button-primary" type="submit">Cadastrar emissor</button></div>
+            </form>
+            <p id="issuerMessage" class="message" role="status"></p>
+            <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Função</th><th>Matrícula</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="issuerTableBody"><tr><td colspan="5">Nenhum emissor cadastrado.</td></tr></tbody></table></div>
+          </section>
+        </div>
+      </section>
 
       <section id="assetsView" class="view">
         <div class="section-heading">
@@ -50,7 +84,7 @@
         <div class="panel base-status-panel"><h3>Estado da base de demonstração</h3><p id="databaseStatus">Os dados são mantidos apenas neste navegador.</p></div>
         <div class="panel">
           <div class="search-grid">
-            <div><label for="assetSearch">Pesquisar</label><input id="assetSearch" placeholder="Tombamento ou descrição"></div>
+            <div><label for="assetSearch">Pesquisar</label><input id="assetSearch" type="search" autocomplete="off" placeholder="Digite tombamento, série, descrição, marca ou modelo"><div id="assetSearchResults" class="search-results" role="listbox" aria-label="Sugestões de bens"></div></div>
             <div><label for="categoryFilter">Categoria</label><select id="categoryFilter"><option value="">Todas</option></select></div>
             <div><label for="sectorFilter">Setor</label><select id="sectorFilter"><option value="">Todos</option></select></div>
             <div><label for="responsibleFilter">Responsável</label><select id="responsibleFilter"><option value="">Todos</option></select></div>
@@ -64,6 +98,28 @@
               <tbody id="assetsTableBody"><tr><td colspan="10">A consulta será carregada com os dados locais disponíveis.</td></tr></tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <section id="operationsSearchView" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">CONSULTA DOCUMENTAL</p><h2>Consultar operações</h2><p class="section-description">Pesquise transferências e baixas registradas e baixe novamente seus documentos.</p></div></div>
+        <div class="panel">
+          <div class="search-grid operations-search-grid">
+            <div><label for="operationsType">Tipo de operação</label><select id="operationsType"><option value="TODAS">Todas as operações</option><option value="TRANSFERENCIA">Transferências</option><option value="BAIXA">Baixas patrimoniais</option></select></div>
+            <div><label for="operationsDocument">Número do documento</label><input id="operationsDocument" type="search" list="operationsDocumentSuggestions" placeholder="Número do termo ou processo"><datalist id="operationsDocumentSuggestions"></datalist></div>
+            <div><label for="operationsAsset">Tombamento ou série</label><input id="operationsAsset" type="search" list="operationsAssetSuggestions" placeholder="Tombamento / série"><datalist id="operationsAssetSuggestions"></datalist></div>
+            <div><label for="operationsDescription">Descrição do bem</label><input id="operationsDescription" type="search" list="operationsDescriptionSuggestions" placeholder="Descrição, marca ou modelo"><datalist id="operationsDescriptionSuggestions"></datalist></div>
+            <div><label for="operationsSector">Setor</label><input id="operationsSector" type="search" list="operationsSectorSuggestions" placeholder="Origem, destino ou setor da baixa"><datalist id="operationsSectorSuggestions"></datalist></div>
+            <div><label for="operationsResponsible">Responsável</label><input id="operationsResponsible" type="search" list="operationsResponsibleSuggestions" placeholder="Nome do responsável"><datalist id="operationsResponsibleSuggestions"></datalist></div>
+            <div><label for="operationsReason">Motivo</label><input id="operationsReason" type="search" list="operationsReasonSuggestions" placeholder="Motivo da operação"><datalist id="operationsReasonSuggestions"></datalist></div>
+            <div><label for="operationsDateFrom">Data inicial</label><input id="operationsDateFrom" type="date"></div>
+            <div><label for="operationsDateTo">Data final</label><input id="operationsDateTo" type="date"></div>
+            <div><label for="operationsPageSize">Resultados por página</label><select id="operationsPageSize"><option>25</option><option>50</option><option>100</option></select></div>
+          </div>
+          <div class="button-row"><button id="searchOperationsBtn" class="button button-primary" type="button">Pesquisar</button><button id="clearOperationsSearchBtn" class="button button-secondary" type="button">Limpar filtros</button></div>
+          <p id="operationsSearchMessage" class="message" role="status"></p>
+          <div id="operationsResults" class="operations-results"><p class="small-note">Informe os filtros e selecione Pesquisar.</p></div>
+          <div id="operationsPagination" class="operations-pagination" hidden></div>
         </div>
       </section>
 
@@ -121,6 +177,9 @@
             <div id="transferSectorResults" class="search-results" role="listbox" aria-label="Resultados de setores de destino"></div>
             <select id="transferSector" class="search-source-select" required aria-label="Setor de destino selecionado"><option value="">Selecione o setor de destino</option></select>
             <div id="transferDestination" class="notice"><strong>Destino</strong><p>Selecione um setor para consultar sua localização.</p></div>
+            <label for="transferIssuer">Responsável pela emissão do documento</label>
+            <select id="transferIssuer" required><option value="">Selecione quem está emitindo o documento</option></select>
+            <p class="small-note">Cadastre os emissores autorizados em aba Configurações Institucionais.</p>
             <label for="transferReason">Motivo da transferência</label>
             <select id="transferReason" required>
               <option value="">Selecione o motivo</option>
@@ -138,6 +197,12 @@
             </div>
             <p id="transferMessage" class="message" role="status"></p>
           </form>
+          <div id="transferTermPrompt" class="transfer-review-card" hidden aria-live="polite">
+            <div class="transfer-review-header"><div><p class="eyebrow">TRANSFERÊNCIA REGISTRADA</p><h3>Deseja gerar o termo de transferência?</h3></div></div>
+            <p>O bem já foi transferido e o histórico foi salvo. Você pode baixar o PDF agora ou recuperá-lo posteriormente no histórico abaixo.</p>
+            <div class="transfer-review-actions"><button id="skipTransferTermBtn" class="button button-secondary" type="button">Agora não</button><button id="generateTransferTermBtn" class="button button-primary" type="button">Baixar termo em PDF</button></div>
+          </div>
+          
         </div>
       </section>
 
@@ -186,6 +251,7 @@
               <button id="confirmDisposalBtn" class="button button-danger" type="button">Confirmar baixa</button>
             </div>
           </div>
+          
         </div>
       </section>
 
@@ -252,7 +318,8 @@
               <div><label for="newAssetBrand">Marca</label><input id="newAssetBrand" maxlength="100"></div>
               <div><label for="newAssetModel">Modelo</label><input id="newAssetModel" maxlength="100"></div>
               <div><label for="newAssetSerial">Número de série</label><input id="newAssetSerial" maxlength="100"></div>
-              <div><label for="newAssetSector">Setor *</label><select id="newAssetSector" required><option value="">Selecione</option></select></div>
+              <div><label for="newAssetUnit">Unidade / edifício *</label><select id="newAssetUnit" required><option value="">Selecione uma unidade</option></select></div>
+              <div><label for="newAssetSector">Setor *</label><select id="newAssetSector" required><option value="">Selecione a unidade primeiro</option></select></div>
               <div><label for="newAssetResponsible">Responsável *</label><select id="newAssetResponsible" required><option value="">Selecione</option></select></div>
               <div><label for="newAssetAcquisitionDate">Data de aquisição</label><input id="newAssetAcquisitionDate" type="date"></div>
               <div><label for="newAssetAcquisitionValue">Valor de aquisição (R$)</label><input id="newAssetAcquisitionValue" inputmode="decimal" placeholder="0,00"></div>
@@ -292,7 +359,10 @@
         <div class="panel">
           <p>Gerencie categorias, unidades, andares, locais físicos, setores e responsáveis. Os identificadores são gerados automaticamente para novos cadastros. Registros já utilizados por bens não podem ser excluídos por esta tela.</p>
           <div id="referenceTypeCards" class="reference-type-cards" aria-label="Tipos de cadastro"></div>
-          <div class="search-grid reference-toolbar">
+          <div id="referenceNewButtonRow" class="reference-new-button-row">
+            <button id="newReferenceBtn" class="button button-primary" type="button">Nova categoria</button>
+          </div>
+          <div class="reference-toolbar">
             <div><label for="referenceType">Tipo de cadastro</label>
               <select id="referenceType">
                 <option value="categorias">Categorias</option>
@@ -303,7 +373,6 @@
                 <option value="responsaveis">Responsáveis</option>
               </select>
             </div>
-            <button id="newReferenceBtn" class="button button-primary" type="button">Novo cadastro</button>
           </div>
           <p id="referenceMessage" class="message" role="status"></p>
           <div class="table-wrap"><table><thead id="referenceTableHead"></thead><tbody id="referenceTableBody"></tbody></table></div>

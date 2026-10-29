@@ -249,3 +249,52 @@ footer { background:#07112B; color:#B7C8E5; border-top:2px solid #0066FF; }
 #referenceType{display:none}
 #referenceTypeCards + .reference-toolbar > div label[for="referenceType"]{display:none}
 @media(max-width:600px){.reference-type-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.reference-type-card{padding:.75rem;font-size:.9rem}}
+
+.transfer-history-panel { margin-top: 1.25rem; }
+.transfer-history-list { display: grid; gap: .75rem; }
+.transfer-history-item { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem; border:1px solid #d3dfef; border-radius:10px; background:#f8fbff; }
+.transfer-history-item p { margin:.35rem 0 0; font-size:.9rem; color:#4b5c74; }
+@media(max-width:700px){.transfer-history-item{align-items:flex-start;flex-direction:column}.transfer-history-item .button{width:100%}}
+
+/* Cadastros básicos: botão de inclusão acompanha a categoria ativa. */
+.reference-toolbar{display:block;margin:0 0 1rem;}
+#referenceTypeCards{display:flex;flex-wrap:wrap;gap:.65rem;align-items:stretch;}
+#referenceTypeCards .reference-type-card{flex:1 1 145px;}
+#referenceTypeCards #newReferenceBtn{flex:1 1 100%;max-width:320px;margin:.15rem auto .25rem;order:2;}
+#referenceTypeCards .reference-type-card.active + #newReferenceBtn{margin-left:0;margin-right:0;}
+@media(max-width:650px){#referenceTypeCards .reference-type-card{flex:1 1 42%;}#referenceTypeCards #newReferenceBtn{max-width:none;}}
+
+/* Botão de inclusão em linha própria, alinhado abaixo da aba ativa. */
+.reference-new-button-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.65rem;margin:-.15rem 0 1rem;}
+#newReferenceBtn{grid-column:calc(var(--active-index, 0) + 1);width:100%;min-height:48px;justify-self:stretch;}
+@media(max-width:650px){.reference-new-button-row{grid-template-columns:repeat(2,minmax(0,1fr));}#newReferenceBtn{grid-column:calc(mod(var(--active-index, 0), 2) + 1);}}
+
+
+/* Baixa patrimonial: histórico compacto e pesquisável. */
+.disposal-history-panel{margin-top:1.25rem;padding:1rem}
+.disposal-history-panel .section-heading{align-items:center;gap:.75rem}
+.disposal-history-panel>label{display:block;margin:.75rem 0 .35rem;font-weight:650}
+.disposal-history-panel>input{width:100%;max-width:620px}
+.disposal-history-item{padding:.75rem 1rem;gap:.75rem}
+.disposal-history-item strong{display:block;overflow-wrap:anywhere}
+.disposal-history-item p{margin:.25rem 0 0;line-height:1.45;overflow-wrap:anywhere}
+#disposalAssetSummary{margin:.75rem 0 1rem}
+@media(max-width:700px){.disposal-history-panel .section-heading{align-items:flex-start;flex-direction:column}.disposal-history-panel .section-heading .button{width:auto}.disposal-history-item{padding:.75rem}}
+
+/* Ajustes de compactação do histórico e da aba institucional */
+.transfer-history-list { gap: .45rem; max-height: 440px; overflow-y: auto; padding-right: .25rem; }
+.transfer-history-item { padding: .65rem .8rem; gap: .75rem; }
+.transfer-history-item p { margin: .2rem 0 0; line-height: 1.35; }
+.transfer-history-item .button { flex: 0 0 auto; white-space: nowrap; }
+.institutional-settings { margin-top: 0; }
+@media(max-width:700px){.transfer-history-list{max-height:360px}.transfer-history-item{padding:.7rem}}
+
+.operations-search-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}.operations-pagination{display:flex;align-items:center;justify-content:flex-end;gap:.6rem;flex-wrap:wrap;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border,#d9e2f0)}.operations-pagination span{margin-right:auto;color:var(--muted,#5c6780);font-size:.92rem}.operations-results{margin-top:1rem}.operations-results table{min-width:760px}
+
+/* Sugestões institucionais: lista contida no campo, sem bloquear os demais controles. */
+.reference-fields > div { position: relative; min-width: 0; }
+.responsible-suggestions[hidden] { display: none !important; }
+.responsible-suggestions { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; right: 0; max-height: 260px; overflow-y: auto; padding: 6px; border: 1px solid #cbd8ed; border-radius: 12px; background: #fff; box-shadow: 0 12px 28px rgba(11,16,38,.16); }
+.responsible-suggestion-card { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: #0b1026; text-align: left; cursor: pointer; }
+.responsible-suggestion-card:hover, .responsible-suggestion-card:focus-visible { background: #edf5ff; outline: 2px solid #2563ff; outline-offset: -2px; }
+.responsible-suggestion-card span { color: #53647f; font-size: .86rem; }

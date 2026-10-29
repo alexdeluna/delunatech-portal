@@ -7,12 +7,12 @@ export const COLLECTIONS = {
 const STORAGE_KEY = "delunatech.gestao-patrimonial.demo.v1";
 const MASTER = ["bens", "categorias", "responsaveis", "setores", "locais", "andares", "unidades"];
 
-const DEMO_VERSION = "delunatech-demo-seed-v1";
+const DEMO_VERSION = "delunatech-demo-seed-v2-responsaveis-vinculados";
 function buildDemoDataset() {
   const unidades = [
-    {ID_Unidade:"U-REC",Nome_Unidade:"Unidade Recife",Cidade:"Recife",Estado:"PE"},
-    {ID_Unidade:"U-JPA",Nome_Unidade:"Unidade João Pessoa",Cidade:"João Pessoa",Estado:"PB"},
-    {ID_Unidade:"U-MCZ",Nome_Unidade:"Unidade Maceió",Cidade:"Maceió",Estado:"AL"}
+    {ID_Unidade:"U-REC",Nome_Unidade:"Unidade Recife",Descricao:"Unidade administrativa responsável pela gestão e guarda dos bens patrimoniais em Recife.",Cidade:"Recife",Estado:"PE"},
+    {ID_Unidade:"U-JPA",Nome_Unidade:"Unidade João Pessoa",Descricao:"Unidade administrativa responsável pela gestão e guarda dos bens patrimoniais em João Pessoa.",Cidade:"João Pessoa",Estado:"PB"},
+    {ID_Unidade:"U-MCZ",Nome_Unidade:"Unidade Maceió",Descricao:"Unidade administrativa responsável pela gestão e guarda dos bens patrimoniais em Maceió.",Cidade:"Maceió",Estado:"AL"}
   ];
   const andares=[], locais=[], setores=[], responsaveis=[];
   const floorsByUnit = new Map();
@@ -25,7 +25,7 @@ function buildDemoDataset() {
   const sectorNames=["Tecnologia da Informação","Recursos Humanos","Financeiro","Administrativo","Atendimento","Compras","Patrimônio","Jurídico","Operações","Diretoria","Comunicação","Arquivo","Engenharia","Suporte Técnico","Planejamento","Logística","Contabilidade","Protocolo","Infraestrutura","Sala de Reuniões"];
   const first=["Ana","Bruno","Camila","Daniel","Eduarda","Felipe","Gabriela","Henrique","Isabela","João","Karen","Lucas","Mariana","Nicolas","Olívia","Paulo","Rafaela","Samuel","Tatiana","Vinícius"];
   const last=["Almeida","Barbosa","Carvalho","Dias","Esteves","Ferreira","Gomes","Lima","Moura","Nunes","Oliveira","Pereira","Queiroz","Ramos","Santos","Teixeira","Vieira","Xavier","Araújo","Costa"];
-  for(let i=0;i<20;i++) responsaveis.push({ID_Responsavel:`R-${String(i+1).padStart(3,'0')}`,Nome_Completo:`${first[i]} ${last[(i*3)%20]}`,Email:`responsavel${i+1}@exemplo.invalid`});
+  for(let i=0;i<20;i++) responsaveis.push({ID_Responsavel:`R-${String(i+1).padStart(3,'0')}`,Nome_Completo:`${first[i]} ${last[(i*3)%20]}`,ID_Setor_Vinculo:`S-${String(i+1).padStart(3,'0')}`,Responsavel_Oficial_Setor:"Sim",Ativo:"Sim",Email_Ficticio:`responsavel${i+1}@exemplo.invalid`});
   for(let i=0;i<20;i++) {
     const u=unidades[i%3], floorList=floorsByUnit.get(u.ID_Unidade), floor=floorList[Math.min(floorList.length-1,Math.floor(i/3)%floorList.length)];
     const localId=`L-${String(i+1).padStart(3,'0')}`;
@@ -33,7 +33,7 @@ function buildDemoDataset() {
     setores.push({ID_Setor:`S-${String(i+1).padStart(3,'0')}`,Nome_Setor:sectorNames[i],ID_Local_Atual:localId,ID_Responsavel:responsaveis[i].ID_Responsavel});
   }
   const catNames=["Computadores e notebooks","Monitores","Impressoras e scanners","Rede e servidores","Periféricos e acessórios","Mobiliário e outros"];
-  const categorias=catNames.map((n,i)=>({ID_Categoria:`C-${String(i+1).padStart(2,'0')}`,Nome_Categoria:n}));
+  const categorias=catNames.map((n,i)=>({ID_Categoria:`C-${String(i+1).padStart(2,'0')}`,Nome_Categoria:n,Descricao:`Categoria destinada ao cadastro e à organização dos bens patrimoniais do grupo ${n.toLocaleLowerCase("pt-BR")}.`,Ativa:"Sim"}));
   const models=[
     ["Notebook corporativo","Dell","Latitude 5440"],["Computador desktop","Lenovo","ThinkCentre M70"],["Monitor LED 24 polegadas","Dell","P2422H"],["Impressora multifuncional","Brother","MFC-L8900"],["Switch de rede 24 portas","Cisco","CBS350"],["Teclado USB","Logitech","K120"],["Mouse óptico USB","Logitech","B100"],["Estabilizador de energia","SMS","Revolution"],["Projetor multimídia","Epson","PowerLite"],["Cadeira de escritório","Flexform","Uni Me"]
   ];
@@ -47,8 +47,28 @@ function buildDemoDataset() {
 }
 export async function ensureDemoSeed() {
   const store=readStore();
-  if(store._demoSeedVersion===DEMO_VERSION) return false;
-  if(rows(store,"bens").length) { store._demoSeedVersion=DEMO_VERSION; writeStore(store); return false; }
+  // Migração segura: corrige apenas responsáveis da base de demonstração já existente.
+  // Não substitui bens, cadastros criados pelo visitante nem o histórico local.
+  const demoPeople=rows(store,"responsaveis");
+  const demoSectors=rows(store,"setores");
+  let migrated=false;
+  for(const person of demoPeople) {
+    const isDemo=person.criadoPor==="base-demo" || /^R-\d{3}$/.test(String(person.ID_Responsavel??""));
+    if(!isDemo || person.ID_Setor_Vinculo) continue;
+    const suffix=String(person.ID_Responsavel??"").match(/(\d+)$/)?.[1];
+    const linkedSector=demoSectors.find(sector=>String(sector.ID_Setor??"").endsWith(String(suffix??"")));
+    if(linkedSector) {
+      person.ID_Setor_Vinculo=linkedSector.ID_Setor;
+      person.Responsavel_Oficial_Setor="Sim";
+      if(person.Ativo===undefined) person.Ativo="Sim";
+      migrated=true;
+    }
+  }
+  for(const category of rows(store,"categorias")) if(!String(category.Descricao??"").trim()) { category.Descricao=`Categoria destinada ao cadastro e à organização dos bens patrimoniais do grupo ${category.Nome_Categoria||"geral"}.`; migrated=true; }
+  for(const unit of rows(store,"unidades")) if(!String(unit.Descricao??"").trim()) { unit.Descricao=`Unidade administrativa responsável pela gestão e guarda dos bens patrimoniais em ${unit.Nome_Unidade||"esta unidade"}.`; migrated=true; }
+  if(migrated) writeStore(store);
+  if(store._demoSeedVersion===DEMO_VERSION) return migrated;
+  if(rows(store,"bens").length) { store._demoSeedVersion=DEMO_VERSION; writeStore(store); return migrated; }
   const d=buildDemoDataset();
   for(const name of ["unidades","andares","locais","setores","responsaveis","categorias","bens"]) {
     store[name]=d[name].map(row=>({...row,_id:String(row.Tombamento??row.ID_Categoria??row.ID_Responsavel??row.ID_Setor??row.ID_Local??row.ID_Andar??row.ID_Unidade),criadoPor:row._demoBase?"base-demo":"base-demo",criadoEm:new Date().toISOString()}));
@@ -80,8 +100,8 @@ function upsert(store, name, id, data, merge = true) {
 }
 function addEvent(store, name, data) {
   const list = rows(store, name).slice();
-  list.push({ ...data, _id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, criadoEm: new Date().toISOString() });
-  store[name] = list;
+  const record = { ...data, _id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, criadoEm: new Date().toISOString() };
+  list.push(record); store[name] = list; return record;
 }
 function audit(store, data) { addEvent(store, "auditoria", { entidade:"bem", ...data, criadoPor:"demo-local", usuarioEmail:"Demonstração local" }); }
 export async function getCollectionRows(name) { return rows(readStore(), name).map(item => ({ ...item })); }
@@ -98,15 +118,16 @@ export async function importInitialDataset(dataset) {
   writeStore(store); return true;
 }
 export async function deleteTestMasterData() { const store = readStore(); for (const name of MASTER) store[name] = []; writeStore(store); }
-export async function recordAssetTransfer({ asset, destinationSector, destinationResponsible, reason, notes }) {
+export async function recordAssetTransfer({ asset, destinationSector, destinationResponsible, reason, notes, transferId, transferDate, originSectorSnapshot, originResponsibleSnapshot, destinationSectorSnapshot, destinationResponsibleSnapshot, issuerSnapshot, patrimonyManagerSnapshot }) {
   const store = readStore(); const id = String(asset.Tombamento);
   const currentAsset = rows(store,"bens").find(item => String(item.Tombamento) === id);
   if (!currentAsset) throw new Error("O bem selecionado não foi encontrado na base local.");
-  const originSectorName = rows(store,"setores").find(item => String(item.ID_Setor) === String(currentAsset.ID_Setor))?.Nome_Setor ?? currentAsset.ID_Setor ?? "";
+  const originSector = rows(store,"setores").find(item => String(item.ID_Setor) === String(currentAsset.ID_Setor));
+  const originSectorName = originSector?.Nome_Setor ?? currentAsset.ID_Setor ?? "";
   const updated = { ...currentAsset, ID_Setor:destinationSector.ID_Setor, ID_Responsavel:destinationResponsible?.ID_Responsavel ?? currentAsset.ID_Responsavel ?? "", atualizadoEm:new Date().toISOString() };
   upsert(store,"bens",id,updated,false);
-  addEvent(store,"movimentacoes",{ Tombamento:id, Descricao_Bem:asset.Descricao_Bem ?? "", tipo:"TRANSFERENCIA", setorOrigemId:currentAsset.ID_Setor ?? "", setorOrigemNome:originSectorName, setorDestinoId:destinationSector.ID_Setor, setorDestinoNome:destinationSector.Nome_Setor, responsavelAnteriorId:currentAsset.ID_Responsavel ?? "", responsavelNovoId:destinationResponsible?.ID_Responsavel ?? currentAsset.ID_Responsavel ?? "", motivo:reason, observacoes:notes ?? "", criadoPor:"demo-local", usuarioEmail:"Demonstração local" });
-  audit(store,{ Tombamento:id, operacao:"TRANSFERENCIA", resumo:`Transferência do setor ${originSectorName} para ${destinationSector.Nome_Setor}`, motivo:reason, observacoes:notes ?? "" }); writeStore(store);
+  const movement = addEvent(store,"movimentacoes",{ Tombamento:id, Descricao_Bem:asset.Descricao_Bem ?? "", tipo:"TRANSFERENCIA", transferId:transferId ?? `TR-${Date.now()}`, transferDate:transferDate ?? new Date().toISOString(), assetSnapshot:{...currentAsset}, setorOrigemId:currentAsset.ID_Setor ?? "", setorOrigemNome:originSectorName, setorDestinoId:destinationSector.ID_Setor, setorDestinoNome:destinationSector.Nome_Setor, responsavelAnteriorId:currentAsset.ID_Responsavel ?? "", responsavelNovoId:destinationResponsible?.ID_Responsavel ?? currentAsset.ID_Responsavel ?? "", originSectorSnapshot:originSectorSnapshot ?? originSector ?? null, originResponsibleSnapshot:originResponsibleSnapshot ?? rows(store,"responsaveis").find(item=>String(item.ID_Responsavel)===String(currentAsset.ID_Responsavel)) ?? null, destinationSectorSnapshot:destinationSectorSnapshot ?? destinationSector, destinationResponsibleSnapshot:destinationResponsibleSnapshot ?? destinationResponsible ?? null, issuerSnapshot:issuerSnapshot ?? null, patrimonyManagerSnapshot:patrimonyManagerSnapshot ?? null, motivo:reason, observacoes:notes ?? "", criadoPor:"demo-local", usuarioEmail:"Demonstração local" });
+  audit(store,{ Tombamento:id, operacao:"TRANSFERENCIA", resumo:`Transferência do setor ${originSectorName} para ${destinationSector.Nome_Setor}`, motivo:reason, observacoes:notes ?? "" }); writeStore(store); return movement;
 }
 export async function recordAssetDisposal({ asset, reason, documentNumber, notes }) {
   const store = readStore(); const id = String(asset.Tombamento);

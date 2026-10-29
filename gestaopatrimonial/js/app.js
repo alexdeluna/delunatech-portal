@@ -5,6 +5,29 @@ const $ = id => document.getElementById(id);
 let currentUser = null;
 let currentProfile = null;
 let importIsValid = false;
+let selectedAssetSearchTombamento = "";
+const INSTITUTIONAL_KEY = "delunatech.gestao-patrimonial.institucional.v1";
+const ISSUERS_KEY = "delunatech.gestao-patrimonial.emissores.v1";
+const readLocalJson = (key, fallback) => { try { const v=JSON.parse(localStorage.getItem(key)||"null"); return v ?? fallback; } catch { return fallback; } };
+const saveLocalJson = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+function renderIssuers() {
+  const issuers=readLocalJson(ISSUERS_KEY, []), body=$("issuerTableBody"), select=$("transferIssuer");
+  if(body){ body.replaceChildren(); if(!issuers.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="Nenhum emissor cadastrado.";tr.append(td);body.append(tr);} else issuers.forEach(item=>{const tr=document.createElement("tr");[item.name,item.role,item.registration||"—",item.active===false?"Inativo":"Ativo"].forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td)});const td=document.createElement("td"),btn=document.createElement("button");btn.type="button";btn.className="button button-secondary";btn.textContent=item.active===false?"Ativar":"Desativar";btn.addEventListener("click",()=>{item.active=item.active===false;saveLocalJson(ISSUERS_KEY,issuers);renderIssuers()});td.append(btn);tr.append(td);body.append(tr)}); }
+  if(select){const old=select.value;select.replaceChildren(new Option("Selecione quem está emitindo o documento",""));issuers.filter(x=>x.active!==false).forEach(x=>select.add(new Option(`${x.name} — ${x.role}`,x.id)));if(issuers.some(x=>x.id===old&&x.active!==false))select.value=old;}
+}
+
+
+function formatBrazilDateTime(value) {
+  if (value == null || value === "") return "Data não informada";
+  let date;
+  if (typeof value === "object" && value.seconds != null) date = new Date(value.seconds * 1000);
+  else if (value instanceof Date) date = value;
+  else date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const datePart = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const timePart = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${datePart} às ${timePart}h`;
+}
 
 function setMessage(id, message, type = "") {
   const el = $(id);
@@ -20,6 +43,8 @@ function showApp() {
 }
 
 function activateView(viewId) {
+  const detail = $("assetDetailModal");
+  if (detail && viewId !== "assetsView") detail.hidden = true;
   document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== viewId);
   document.querySelectorAll(".nav-tab").forEach(b => b.classList.toggle("active", b.dataset.view === viewId));
 }
@@ -73,13 +98,13 @@ async function searchAssets() {
       getCollectionRows("andares"), getCollectionRows("unidades"),
       getCollectionRows("responsaveis")
     ]);
+    assetAutocompleteRows = assets;
     const catMap = new Map(categories.map(x => [String(x.ID_Categoria ?? ""), x.Nome_Categoria]));
     const sectorMap = new Map(sectors.map(x => [String(x.ID_Setor ?? ""), x]));
     const placeMap = new Map(places.map(x => [String(x.ID_Local ?? ""), x]));
     const floorMap = new Map(floors.map(x => [String(x.ID_Andar ?? ""), x]));
     const unitMap = new Map(units.map(x => [String(x.ID_Unidade ?? ""), x]));
     const peopleMap = new Map(people.map(x => [String(x.ID_Responsavel ?? ""), x]));
-
     // Popula os filtros com os cadastros locais atuais, preservando a seleção.
     const sectorSelect = $("sectorFilter");
     const previousSector = sectorSelect.value;
@@ -97,7 +122,7 @@ async function searchAssets() {
     }
     if ([...responsibleSelect.options].some(o => o.value === previousResponsible)) responsibleSelect.value = previousResponsible;
 
-    const term = $("assetSearch").value.trim().toLocaleLowerCase("pt-BR");
+    const term = (selectedAssetSearchTombamento || $("assetSearch").value.trim()).toLocaleLowerCase("pt-BR");
     const cat = $("categoryFilter").value;
     const status = $("statusFilter").value;
     const sectorIdFilter = sectorSelect.value;
@@ -189,7 +214,20 @@ async function loadReportOptions() {
     if ([...select.options].some(o=>o.value===previous)) select.value=previous;
   };
   fill("reportCategory",categories,"ID_Categoria","Nome_Categoria","Todas");
-  fill("reportSector",sectors,"ID_Setor","Nome_Setor","Todos");
+  {
+    const select=$("reportSector"), previous=select.value;
+    select.replaceChildren(new Option("Todos",""));
+    const unitById=new Map(units.map(u=>[String(u.ID_Unidade),u]));
+    const floorById=new Map((await getCollectionRows("andares")).map(f=>[String(f.ID_Andar),f]));
+    const placeById=new Map((await getCollectionRows("locais")).map(p=>[String(p.ID_Local),p]));
+    sectors.slice().sort((a,b)=>String(a.Nome_Setor||"").localeCompare(String(b.Nome_Setor||""),"pt-BR")).forEach(sec=>{
+      const place=placeById.get(String(sec.ID_Local_Atual||sec.ID_Local_Referencia||""));
+      const floor=floorById.get(String(place?.ID_Andar||sec.ID_Andar||""));
+      const unit=unitById.get(String(sec.ID_Unidade||floor?.ID_Unidade||place?.ID_Unidade||""));
+      select.add(new Option(`${sec.Nome_Setor||sec.ID_Setor} — ${unit?.Nome_Unidade||"Unidade não identificada"}`,String(sec.ID_Setor)));
+    });
+    if([...select.options].some(o=>o.value===previous)) select.value=previous;
+  }
   fill("reportUnit",units,"ID_Unidade","Nome_Unidade","Todas");
   fill("reportResponsible",people,"ID_Responsavel","Nome_Completo","Todos");
 }
@@ -327,9 +365,29 @@ async function openAssetDetail(tombamento) {
       ["Observações", asset.Observacoes]
     ];
     for (const [label, value] of fields) content.append(detailField(label, value));
-    const directHistory = [...moves.map(x => ({...x, _kind: x.tipo === "MUDANCA_LOCALIZACAO_SETOR" ? "Mudança de localização do setor" : "Movimentação"})),
-                           ...disposals.map(x => ({...x, _kind:"Baixa"})),
-                           ...audit.map(x => ({...x, _kind:"Auditoria"}))]
+    const personName = value => value?.Nome_Completo || value?.nome || "Não informado";
+    const sectorName = value => value?.Nome_Setor || value?.nome || "Não informado";
+    const locationForSector = sec => {
+      if (!sec) return "Não informado";
+      const loc = places.find(x => String(x.ID_Local) === String(sec.ID_Local_Atual ?? sec.ID_Local_Referencia ?? ""));
+      const fl = floors.find(x => String(x.ID_Andar) === String(loc?.ID_Andar ?? ""));
+      const un = units.find(x => String(x.ID_Unidade) === String(loc?.ID_Unidade ?? fl?.ID_Unidade ?? ""));
+      return [un?.Nome_Unidade, fl?.Nome_Andar, loc?.Nome_Local_Fisico].filter(Boolean).join(" — ") || "Localização não informada";
+    };
+    const directHistory = [...moves.map(x => {
+      const from = x.originSectorSnapshot || sectors.find(s => String(s.ID_Setor) === String(x.setorOrigemId ?? x.ID_Setor_Origem ?? ""));
+      const to = x.destinationSectorSnapshot || sectors.find(s => String(s.ID_Setor) === String(x.setorDestinoId ?? x.ID_Setor_Destino ?? ""));
+      const fromPerson = x.originResponsibleSnapshot || people.find(p => String(p.ID_Responsavel) === String(x.responsavelAnteriorId ?? ""));
+      const toPerson = x.destinationResponsibleSnapshot || people.find(p => String(p.ID_Responsavel) === String(x.responsavelNovoId ?? ""));
+      const isTransfer = String(x.tipo || "").toUpperCase() === "TRANSFERENCIA";
+      const details = isTransfer
+        ? `Origem: ${sectorName(from) !== "Não informado" ? sectorName(from) : x.setorOrigemNome || "Não informado"} (${locationForSector(from)}); responsável anterior: ${personName(fromPerson)}. Destino: ${sectorName(to) !== "Não informado" ? sectorName(to) : x.setorDestinoNome || "Não informado"} (${locationForSector(to)}); novo responsável: ${personName(toPerson)}.`
+        : (x.descricao || x.operacao || x.acao || "Detalhes adicionais não registrados.");
+      return {...x, _kind: x.tipo === "MUDANCA_LOCALIZACAO_SETOR" ? "Mudança de localização do setor" : isTransfer ? "Transferência patrimonial" : "Movimentação",
+        _historyDescription: `${details}${x.motivo || x.reason ? ` Motivo: ${x.motivo || x.reason}.` : ""}${x.observacoes || x.notes ? ` Observações: ${x.observacoes || x.notes}.` : ""}`};
+    }),
+      ...disposals.map(x => ({...x, _kind:"Baixa", _historyDescription:`Motivo da baixa: ${x.motivo || x.reason || "Não informado"}.${x.observacoes || x.notes ? ` Observações: ${x.observacoes || x.notes}.` : ""}`})),
+      ...audit.map(x => ({...x, _kind:"Auditoria", _historyDescription:`${x.descricao || x.operacao || x.acao || x.motivo || "Registro de auditoria"}${x.observacoes ? ` · ${x.observacoes}` : ""}`}))]
       .filter(x => String(x.Tombamento ?? x.tombamento ?? x.ID_Bem ?? x.idBem ?? "") === String(tombamento));
     // Mudanças futuras do setor guardam um retrato dos tombamentos afetados no momento da operação.
     // Não associamos eventos antigos apenas pelo setor atual, pois isso poderia inventar vínculos históricos.
@@ -338,7 +396,7 @@ async function openAssetDetail(tombamento) {
         && Array.isArray(x.bensAfetados)
         && x.bensAfetados.some(id => String(id) === String(tombamento)))
       .map(x => ({...x, _kind:"Mudança indireta de localização (setor)", _indirect:true,
-        _historyDescription:`${x.localOrigemNome || "Localização anterior não informada"} → ${x.localDestinoNome || "Nova localização não informada"}${x.motivo ? ` · Motivo: ${x.motivo}` : ""}${x.observacoes ? ` · Observações: ${x.observacoes}` : ""}`}));
+        _historyDescription:`Setor: ${x.setorOrigemNome || x.originSectorSnapshot?.Nome_Setor || "Origem não informada"} (responsável: ${x.originResponsibleSnapshot?.Nome_Completo || x.responsavelOrigemNome || "Não informado"}) → Setor: ${x.setorDestinoNome || x.destinationSectorSnapshot?.Nome_Setor || "Destino não informado"} (responsável: ${x.destinationResponsibleSnapshot?.Nome_Completo || x.responsavelDestinoNome || "Não informado"})${x.motivo || x.reason ? ` · Motivo: ${x.motivo || x.reason}` : ""}${x.observacoes || x.notes ? ` · Observações: ${x.observacoes || x.notes}` : ""}`}));
     const related = [...directHistory, ...indirectSectorHistory];
     if (!related.length) {
       const p = document.createElement("p");
@@ -365,8 +423,8 @@ async function openAssetDetail(tombamento) {
         const desc = document.createElement("p");
         desc.textContent = item._historyDescription || item.motivo || item.descricao || item.operacao || item.acao || item.observacoes || "Registro histórico disponível.";
         const meta = document.createElement("small");
-        const rawWhen = item.dataHora ?? item.criadoEm ?? item.data;
-        const when = rawWhen?.seconds ? new Date(rawWhen.seconds*1000).toLocaleString("pt-BR") : (rawWhen || "Data não informada");
+        const rawWhen = item.dataHora ?? item.criadoEm ?? item.data ?? item.transferDate;
+        const when = formatBrazilDateTime(rawWhen);
         meta.textContent = `${when} · ${item.usuarioNome || item.usuarioEmail || item.criadoPor || "Usuário não informado"}`;
         li.append(title, desc, meta); list.append(li);
       }
@@ -451,9 +509,11 @@ async function loadTransferView() {
     getCollectionRows("locais"), getCollectionRows("andares"), getCollectionRows("unidades")
   ]);
   transferAssets = assets.filter(a => a.Situacao !== "Baixado");
+  window.__gpCategories = await getCollectionRows("categorias");
   transferSectors = sectors.filter(x => x.Ativo !== false && x.Ativo !== "Não");
   transferPeople = people.filter(x => x.Ativo !== false && x.Ativo !== "Não");
   transferPlaces = places; transferFloors = floors; transferUnits = units;
+  renderIssuers();
   const assetSelect = $("transferAsset");
   assetSelect.replaceChildren(new Option("Selecione um bem", ""));
   for (const a of transferAssets) assetSelect.add(new Option(`${a.Tombamento} — ${a.Descricao_Bem}`, String(a.Tombamento)));
@@ -466,6 +526,7 @@ async function loadTransferView() {
   $("transferSectorResults").replaceChildren();
   updateTransferOrigin();
   updateTransferDestination();
+  /* Histórico centralizado em Consultar operações. */
 }
 function transferAssetSearchText(asset) {
   const sector = transferSectors.find(x => String(x.ID_Setor) === String(asset.ID_Setor));
@@ -515,6 +576,7 @@ function updateTransferDestination() {
 $("transferAsset")?.addEventListener("change", updateTransferOrigin);
 $("transferSector")?.addEventListener("change", updateTransferDestination);
 let pendingTransfer = null;
+let lastConfirmedTransfer = null;
 
 function reviewItem(label, value, wide = false) {
   const item = document.createElement("div");
@@ -534,6 +596,8 @@ function showTransferReview(data) {
   content.replaceChildren();
   const fromSector = transferSectors.find(x => String(x.ID_Setor) === String(data.asset.ID_Setor));
   const currentResponsible = transferPeople.find(x => String(x.ID_Responsavel) === String(data.asset.ID_Responsavel));
+  const manager = readLocalJson(INSTITUTIONAL_KEY, {});
+  const issuer = data.issuerSnapshot || readLocalJson(ISSUERS_KEY, []).find(x => x.id === $("transferIssuer")?.value);
   content.append(
     reviewItem("Tombamento", data.asset.Tombamento),
     reviewItem("Descrição do bem", data.asset.Descricao_Bem),
@@ -543,6 +607,8 @@ function showTransferReview(data) {
     reviewItem("Localização de destino", sectorLocationLabel(data.destinationSector), true),
     reviewItem("Responsável atual", currentResponsible?.Nome_Completo),
     reviewItem("Responsável no destino", data.destinationResponsible?.Nome_Completo || "Não informado"),
+    reviewItem("Responsável pelo Patrimônio", manager.name ? `${manager.name}${manager.role ? ` — ${manager.role}` : ""}` : "Não configurado"),
+    reviewItem("Pessoa autorizada a emitir o documento", issuer?.name ? `${issuer.name}${issuer.role ? ` — ${issuer.role}` : ""}` : "Não selecionada"),
     reviewItem("Motivo", data.reason),
     reviewItem("Observações", data.notes || "Nenhuma observação", true)
   );
@@ -551,14 +617,110 @@ function showTransferReview(data) {
   card.scrollIntoView({behavior:"smooth",block:"center"});
 }
 
+function downloadTransferTermPdf(data) {
+  const asset = data.assetSnapshot || data.asset;
+  const from = data.originSectorSnapshot || transferSectors.find(x => String(x.ID_Setor) === String(asset?.ID_Setor));
+  const to = data.destinationSectorSnapshot || data.destinationSector || transferSectors.find(x => String(x.ID_Setor) === String(data.ID_Setor_Destino ?? data.setorDestinoId));
+  const fromPerson = data.originResponsibleSnapshot || transferPeople.find(x => String(x.ID_Responsavel) === String(asset?.ID_Responsavel));
+  const toPerson = data.destinationResponsibleSnapshot || data.destinationResponsible || transferPeople.find(x => String(x.ID_Responsavel) === String(data.ID_Responsavel_Destino ?? data.responsavelDestinoId));
+  if (!asset || !from || !to) { setMessage("transferMessage", "Não foi possível recuperar todos os dados desta transferência para gerar o termo.", "error"); return; }
+  const cat = (window.__gpCategories || []).find(x => String(x.ID_Categoria) === String(asset.ID_Categoria));
+  const date = new Date(data.transferDate || data.criadoEm || Date.now());
+  const dateText = date.toLocaleDateString("pt-BR");
+  const timeText = date.toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
+  const transferId = data.transferId || data._id || `TR-${date.getFullYear()}${String(date.getMonth()+1).padStart(2,"0")}${String(date.getDate()).padStart(2,"0")}`;
+  const fromLoc = sectorLocationLabel(from).split(" — ");
+  const toLoc = sectorLocationLabel(to).split(" — ");
+  const clean = v => String(v ?? "Não informado").replace(/\s+/g," ").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g,"-");
+  const money = formatCurrency(asset.Valor_Aquisicao);
+  const lines = [
+    {type:"title", text:"TERMO DE TRANSFERENCIA DE BEM PATRIMONIAL"},
+    {type:"sub", text:"Documento para conferencia e assinatura"},
+    {type:"para", text:"Registra-se a transferencia de responsabilidade e localizacao do bem patrimonial entre os setores cedente e recebedor. As partes conferem as informacoes e formalizam a movimentacao por meio das assinaturas."},
+    {type:"head", text:"1. IDENTIFICACAO DO BEM"},
+    ...[["Nº de tombamento",asset.Tombamento],["Nº de serie",asset.Numero_Serie??asset.Numero_Serie_Bem],["Descricao",asset.Descricao_Bem],["Categoria",cat?.Nome_Categoria || asset.Nome_Categoria],["Marca / Modelo",`${asset.Marca||"Nao informado"} / ${asset.Modelo||"Nao informado"}`],["Valor patrimonial",money]].map(([a,b])=>({type:"row",label:a,value:b})),
+    {type:"head",text:"2. ORIGEM — SETOR CEDENTE"},
+    ...[["Unidade",fromLoc[0]],["Pavimento",fromLoc[1]],["Setor",from.Nome_Setor],["Ambiente",fromLoc[2]],["Responsavel pelo setor",fromPerson?.Nome_Completo],["Data e hora da transferencia",`${dateText} — ${timeText}`]].map(([a,b])=>({type:"row",label:a,value:b})),
+    {type:"head",text:"3. DESTINO — SETOR RECEBEDOR"},
+    ...[["Unidade",toLoc[0]],["Pavimento",toLoc[1]],["Setor",to.Nome_Setor],["Ambiente",toLoc[2]],["Responsavel pelo setor",toPerson?.Nome_Completo],["Registro da transferencia",transferId]].map(([a,b])=>({type:"row",label:a,value:b})),
+    {type:"head",text:"4. DECLARACOES E OBSERVACOES"},
+    {type:"para",text:"O responsavel cedente declara entregar o bem descrito, e o responsavel recebedor declara recebe-lo no local de destino indicado. A movimentacao fica registrada no sistema patrimonial, preservando seu historico."},
+    ...[["Motivo",data.motivo || data.reason],["Observacoes",data.observacoes ?? data.notes ?? "Sem observacoes adicionais."]].map(([a,b])=>({type:"row",label:a,value:b})),
+    {type:"head",text:"5. ASSINATURAS"},
+    {type:"sign",label:"Responsável cedente",value:fromPerson?.Nome_Completo},
+    {type:"sign",label:"Responsável recebedor",value:toPerson?.Nome_Completo},
+    {type:"sign",label:"Responsável pela emissão do documento",value:data.issuerSnapshot?.name,role:data.issuerSnapshot?.role},
+    {type:"sign",label:"Gestor patrimonial / conferência",value:data.patrimonyManagerSnapshot?.name,role:data.patrimonyManagerSnapshot?.role},
+    ...(data.includeWitness ? [{type:"sign",label:"Testemunha (se aplicável)",value:data.witnessSnapshot?.name}] : []),
+    {type:"foot",text:"DeLunaTech - Tecnologia que simplifica. | Modelo demonstrativo"}
+  ];
+  // PDF A4 de uma pagina, gerado localmente sem pop-up ou dependencia externa.
+  const W=595.28,H=841.89, ops=[]; let y=H-30;
+  const escPdf=t=>clean(t).replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
+  const text=(x,yy,size,t,bold=false)=>{ops.push(`0.08 0.15 0.27 rg BT /${bold?"F2":"F1"} ${size} Tf ${x.toFixed(2)} ${yy.toFixed(2)} Td (${escPdf(t)}) Tj ET`)};
+  const line=(x1,y1,x2,y2)=>ops.push(`${x1} ${y1} m ${x2} ${y2} l S`);
+  ops.push("0.08 0.15 0.27 rg 0.08 0.15 0.27 RG 0.7 w");
+  const wrap=(t,max)=>{const words=clean(t).split(/\s+/);let out=[],cur="";for(const word of words){if((cur+" "+word).trim().length>max&&cur){out.push(cur);cur=word}else cur=(cur?cur+" ":"")+word}if(cur)out.push(cur);return out};
+  for(const item of lines){
+    if(item.type==="title"){text(55,y,13,item.text,true);y-=16;line(40,y,W-40,y);y-=13;}
+    else if(item.type==="sub"){text(55,y,8,item.text);y-=13;}
+    else if(item.type==="para"){for(const l of wrap(item.text,112)){text(42,y,7.5,l);y-=9}y-=3;}
+    else if(item.type==="head"){y-=1;ops.push("0.91 0.95 1 rg");ops.push(`40 ${y-3} ${W-80} 13 re f`);ops.push("0.03 0.40 0.95 RG 2 w");line(40,y-3,40,y+10);ops.push("0.08 0.15 0.27 RG 0.7 w");text(47,y,8,item.text,true);y-=16;}
+    else if(item.type==="row"){const label=clean(item.label), value=clean(item.value||"Nao informado");ops.push("0.79 0.84 0.90 RG 0.45 w");line(40,y-3,W-40,y-3);text(45,y+2,7,label,true);const vals=wrap(value,78);vals.slice(0,2).forEach((v,i)=>text(190,y+2-i*8,7,v));y-=Math.max(12, vals.length>1?17:12);}
+    else if(item.type==="sign"){
+      text(45,y,item.label.length>42?7:7.5,clean(item.label),true); y-=13;
+      text(45,y,7,`Cargo/função: ${clean(item.role||"")}`); y-=12;
+      text(45,y,7,"Data: ____/____/________"); y-=15;
+      line(45,y,300,y); y-=10;
+      const signer=clean(item.value||"Nome não informado");
+      text(Math.max(45,172-signer.length*1.8),y,7.5,signer,true); y-=25;
+    }
+    else if(item.type==="foot"){y-=2;text(40,y,6.5,item.text);}
+  }
+  const stream=ops.join("\n");
+  const objects=["<< /Type /Catalog /Pages 2 0 R >>","<< /Type /Pages /Kids [3 0 R] /Count 1 >>",`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`,"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>","<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`];
+  let pdf="%PDF-1.4\n", offsets=[0];
+  objects.forEach((obj,i)=>{offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`});
+  const xref=pdf.length;pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`+offsets.slice(1).map(o=>`${String(o).padStart(10,"0")} 00000 n \n`).join("")+`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  const blob=new Blob([new TextEncoder().encode(pdf)],{type:"application/pdf"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`Termo-Transferencia-${clean(asset.Tombamento).replace(/[^A-Za-z0-9-]/g,"")||"Patrimonial"}.pdf`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  setMessage("transferMessage","O termo foi gerado e o download do PDF foi iniciado.","success");
+}
+
+async function loadTransferHistory() {
+  const host = $("transferHistoryList"); if (!host) return;
+  host.replaceChildren();
+  const records = (await getCollectionRows("movimentacoes"))
+    .filter(item => item.tipo === "TRANSFERENCIA")
+    .sort((a,b) => String(b.transferDate || b.criadoEm || "").localeCompare(String(a.transferDate || a.criadoEm || "")));
+  if (!records.length) { const p=document.createElement("p"); p.textContent="Ainda não há transferências registradas."; host.append(p); return; }
+  for (const record of records) {
+    const card=document.createElement("article"); card.className="transfer-history-item";
+    const info=document.createElement("div");
+    const title=document.createElement("strong"); title.textContent=`${record.Tombamento || "Bem sem tombamento"} — ${record.Descricao_Bem || record.assetSnapshot?.Descricao_Bem || "Bem patrimonial"}`;
+    const detail=document.createElement("p");
+    const date=new Date(record.transferDate || record.criadoEm);
+    detail.textContent=`${date.toLocaleDateString("pt-BR")} ${date.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · ${record.setorOrigemNome || "Origem não informada"} → ${record.setorDestinoNome || "Destino não informado"} · Motivo: ${record.motivo || "Não informado"}`;
+    info.append(title,detail);
+    const button=document.createElement("button"); button.type="button"; button.className="button button-primary"; button.textContent="Baixar termo PDF";
+    button.addEventListener("click",()=>downloadTransferTermPdf(record));
+    card.append(info,button); host.append(card);
+  }
+}
+
+$("generateTransferTermBtn")?.addEventListener("click", () => { if (lastConfirmedTransfer) downloadTransferTermPdf(lastConfirmedTransfer); });
+$("skipTransferTermBtn")?.addEventListener("click", () => { $("transferTermPrompt").hidden = true; });
+$("refreshTransferHistoryBtn")?.addEventListener("click", () => loadTransferHistory().catch(error => setMessage("transferMessage", `Não foi possível carregar o histórico: ${error.message}`, "error")));
+
 $("transferForm")?.addEventListener("submit", async event => {
   event.preventDefault();
   const asset = transferAssets.find(x => String(x.Tombamento) === $("transferAsset").value);
   const destinationSector = transferSectors.find(x => String(x.ID_Setor) === $("transferSector").value);
   const reason = $("transferReason").value;
   const notes = $("transferNotes").value.trim();
-  if (!asset || !destinationSector || !reason) {
-    setMessage("transferMessage","Informe o bem, o setor de destino e o motivo.","error"); return;
+  const issuer = readLocalJson(ISSUERS_KEY, []).find(x=>x.id===$("transferIssuer").value && x.active!==false);
+  if (!asset || !destinationSector || !reason || !issuer) {
+    setMessage("transferMessage","Informe o bem, o setor de destino, o motivo e o responsável pela emissão do documento.","error"); return;
   }
   if (String(asset.ID_Setor) === String(destinationSector.ID_Setor)) {
     setMessage("transferMessage","O setor de destino é igual ao setor atual. Escolha outro setor.","error"); return;
@@ -569,7 +731,7 @@ $("transferForm")?.addEventListener("submit", async event => {
   const destinationResponsible = destinationPeople[0] || currentPerson || null;
   pendingTransfer = {
     asset: {...asset, _origemNome: currentSector?.Nome_Setor ?? asset.ID_Setor},
-    destinationSector, destinationResponsible, reason, notes, user: currentUser
+    destinationSector, destinationResponsible, reason, notes, issuerSnapshot:{...issuer}, user: currentUser
   };
   showTransferReview(pendingTransfer);
   setMessage("transferMessage","Confira os dados no cartão de revisão. A transferência ainda não foi realizada.");
@@ -589,12 +751,25 @@ $("finalConfirmTransferBtn")?.addEventListener("click", async () => {
   $("editTransferBtn").disabled = true;
   setMessage("transferMessage","Registrando transferência...");
   try {
-    await recordAssetTransfer(pendingTransfer);
+    const now = new Date();
+    const transferData = { ...pendingTransfer,
+      transferId:`TR-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}-${String(Date.now()).slice(-4)}`,
+      transferDate:now.toISOString(),
+      originSectorSnapshot: transferSectors.find(x => String(x.ID_Setor) === String(pendingTransfer.asset.ID_Setor)) || null,
+      originResponsibleSnapshot: transferPeople.find(x => String(x.ID_Responsavel) === String(pendingTransfer.asset.ID_Responsavel)) || null,
+      destinationSectorSnapshot: { ...pendingTransfer.destinationSector },
+      destinationResponsibleSnapshot: pendingTransfer.destinationResponsible ? { ...pendingTransfer.destinationResponsible } : null,
+      issuerSnapshot: pendingTransfer.issuerSnapshot ? {...pendingTransfer.issuerSnapshot} : null,
+      patrimonyManagerSnapshot: {...readLocalJson(INSTITUTIONAL_KEY, {})}
+    };
+    lastConfirmedTransfer = await recordAssetTransfer(transferData);
     pendingTransfer = null;
     $("transferReviewCard").hidden = true;
     $("transferForm").reset();
-    setMessage("transferMessage","Transferência registrada. O setor do bem foi atualizado e o histórico foi gravado.","success");
+    $("transferTermPrompt").hidden = false;
+    setMessage("transferMessage","Transferência registrada com sucesso. Você pode consultar os dados e recuperar o termo em Consultar operações.","success");
     await loadTransferView();
+    $("transferTermPrompt").hidden = false;
     await refreshDashboard();
     await searchAssets();
   } catch (error) {
@@ -621,7 +796,152 @@ async function loadDisposalView() {
   $("disposalAssetSearch").value = "";
   $("disposalAssetResults").replaceChildren();
   updateDisposalAssetSummary();
+  /* Histórico centralizado em Consultar operações. */
 }
+
+
+async function renderDisposalHistory() {
+  const list = $("disposalHistoryList");
+  if (!list) return;
+  const [records, assets, sectors, people] = await Promise.all([
+    getCollectionRows("baixas"), getCollectionRows("bens"),
+    getCollectionRows("setores"), getCollectionRows("responsaveis")
+  ]);
+  const query = ($("disposalHistorySearch")?.value || "").trim().toLocaleLowerCase("pt-BR");
+  const sorted = [...records].sort((a,b) => new Date(b.criadoEm || b.dataHora || b.timestamp || 0) - new Date(a.criadoEm || a.dataHora || a.timestamp || 0));
+  const matches = sorted.filter(record => {
+    const asset = assets.find(a => String(a.Tombamento) === String(record.Tombamento));
+    const sector = sectors.find(x => String(x.ID_Setor) === String(record.setorId || asset?.ID_Setor));
+    const person = people.find(x => String(x.ID_Responsavel) === String(record.responsavelId || asset?.ID_Responsavel));
+    const text = [record.Tombamento, record.Descricao_Bem, asset?.Descricao_Bem, record.motivo,
+      record.documentoAutorizacao, record.observacoes, sector?.Nome_Setor, person?.Nome_Completo].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    return text.includes(query);
+  });
+  list.replaceChildren();
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.className = "small-note";
+    empty.textContent = query ? "Nenhuma baixa corresponde à pesquisa." : "Nenhuma baixa patrimonial registrada.";
+    list.append(empty); return;
+  }
+  matches.forEach(record => {
+    const item = document.createElement("article"); item.className = "transfer-history-item disposal-history-item";
+    const info = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${record.Tombamento || "Sem tombamento"} — ${record.Descricao_Bem || "Bem patrimonial"}`;
+    const details = document.createElement("p");
+    const asset = assets.find(a => String(a.Tombamento) === String(record.Tombamento));
+    const sector = sectors.find(x => String(x.ID_Setor) === String(record.setorId || asset?.ID_Setor));
+    const person = people.find(x => String(x.ID_Responsavel) === String(record.responsavelId || asset?.ID_Responsavel));
+    details.textContent = `Baixa: ${record.motivo || "Motivo não informado"} · Setor: ${sector?.Nome_Setor || "Não informado"} · Responsável: ${person?.Nome_Completo || "Não informado"}`;
+    const metadata = document.createElement("p");
+    metadata.textContent = `Processo/documento: ${record.documentoAutorizacao || "Não informado"} · ${formatBrazilDateTime(record.criadoEm || record.dataHora || record.timestamp)}`;
+    info.append(title, details, metadata);
+    const download = document.createElement("button");
+    download.type = "button"; download.className = "button button-primary"; download.textContent = "Baixar documento";
+    download.addEventListener("click", () => downloadDisposalDocument(record, asset, sector, person));
+    item.append(info, download); list.append(item);
+  });
+}
+
+function downloadDisposalDocument(record, asset, sector, person) {
+  const value = v => String(v ?? "Não informado").replace(/\s+/g, " ").trim() || "Não informado";
+  const date = new Date(record.criadoEm || record.dataHora || record.timestamp || Date.now());
+  const dateText = Number.isNaN(date.getTime()) ? "Não informado" : `${date.toLocaleDateString("pt-BR")} às ${date.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}`;
+  const data = [
+    ["Tombamento", value(record.Tombamento)],
+    ["Descrição do bem", value(record.Descricao_Bem || asset?.Descricao_Bem)],
+    ["Categoria", value(asset?.Nome_Categoria || asset?.Categoria || asset?.ID_Categoria)],
+    ["Marca / modelo", value([asset?.Marca, asset?.Modelo].filter(Boolean).join(" / "))],
+    ["Número de série", value(asset?.Numero_Serie || asset?.NumeroSerie)],
+    ["Situação anterior", value(record.situacaoAnterior || "Ativo")],
+    ["Situação após a baixa", value(record.situacaoNova || "Baixado")],
+    ["Motivo da baixa", value(record.motivo)],
+    ["Documento / processo", value(record.documentoAutorizacao)],
+    ["Setor de vínculo", value(sector?.Nome_Setor)],
+    ["Responsável vinculado", value(person?.Nome_Completo)],
+    ["Data e hora do registro", dateText],
+    ["Observações", value(record.observacoes || "Nenhuma observação informada")]
+  ];
+  // PDF vetorial em padrão institucional; codificação WinAnsi preserva acentos em português.
+  const commands = [];
+  const text = (x,y,size,str,font="F1",color="0.12 0.17 0.27") => {
+    const escaped = String(str).replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)").replace(/[\r\n]/g," ");
+    commands.push(`${color} rg BT /${font} ${size} Tf ${x} ${y} Td (${escaped}) Tj ET`);
+  };
+  const rect = (x,y,w,h,color) => commands.push(`${color} rg ${x} ${y} ${w} ${h} re f`);
+  const line = (x1,y1,x2,y2,color="0.78 0.82 0.88",width=0.7) => commands.push(`${color} RG ${width} w ${x1} ${y1} m ${x2} ${y2} l S`);
+  // A4 portrait, margins 42 pt.
+  rect(0, 786, 595, 56, "0.04 0.08 0.19");
+  rect(42, 800, 34, 28, "0.15 0.39 0.96");
+  text(49, 809, 12, "DL", "F2", "1 1 1");
+  text(88, 818, 9, "DeLunaTech", "F2", "1 1 1");
+  text(88, 802, 7.5, "TECNOLOGIA QUE SIMPLIFICA.", "F1", "0.78 0.87 1");
+  text(42, 756, 17, "TERMO DE BAIXA PATRIMONIAL", "F2", "0.04 0.08 0.19");
+  text(42, 739, 8.5, "REGISTRO ADMINISTRATIVO DE MOVIMENTAÇÃO PATRIMONIAL", "F2", "0.25 0.31 0.42");
+  line(42, 728, 553, 728, "0.15 0.39 0.96", 1.4);
+  rect(42, 686, 511, 28, "0.93 0.95 0.99");
+  text(54, 697, 9, "IDENTIFICAÇÃO E REGISTRO DA BAIXA", "F2", "0.04 0.08 0.19");
+  let y = 666;
+  const left = 42, right = 553, colGap = 18, colW = (right-left-colGap)/2;
+  const wrap = (str, max=54) => {
+    const words = String(str).split(/\s+/); const out=[]; let current="";
+    for (const word of words) { const next=current ? `${current} ${word}` : word; if(next.length>max && current){out.push(current);current=word;}else current=next; }
+    if(current) out.push(current); return out;
+  };
+  const drawField = (label, val, x, yy, width, full=false) => {
+    text(x, yy, 7.5, label.toLocaleUpperCase("pt-BR"), "F2", "0.36 0.41 0.51");
+    const max = Math.max(18, Math.floor(width / 5.1)); const wrapped = wrap(val, max);
+    wrapped.slice(0,3).forEach((part,i)=>text(x, yy-13-(i*11), 9, part, "F1", "0.10 0.14 0.22"));
+    const h = 22 + Math.min(wrapped.length,3)*11;
+    line(x, yy-h, x+width, yy-h, "0.86 0.88 0.92", 0.45);
+    return h + 8;
+  };
+  const fields = data;
+  for (let i=0; i<fields.length;) {
+    const full = [1,7,12].includes(i);
+    if (full) { y -= drawField(fields[i][0], fields[i][1], left, y, right-left, true); i++; }
+    else {
+      const h1 = drawField(fields[i][0], fields[i][1], left, y, colW);
+      const h2 = i+1<fields.length && ![1,7,12].includes(i+1) ? drawField(fields[i+1][0], fields[i+1][1], left+colW+colGap, y, colW) : 0;
+      y -= Math.max(h1,h2); i += h2 ? 2 : 1;
+    }
+  }
+  // Bloco de validação e assinatura, sem afirmar aprovação automática.
+  const signY = Math.max(100, y-18);
+  text(42, signY, 8, "RESPONSÁVEL PELO REGISTRO", "F2", "0.25 0.31 0.42");
+  line(42, signY-38, 270, signY-38, "0.55 0.59 0.66", 0.7);
+  text(42, signY-50, 7.5, "Nome / assinatura", "F1", "0.42 0.46 0.54");
+  text(322, signY, 8, "VALIDAÇÃO ADMINISTRATIVA", "F2", "0.25 0.31 0.42");
+  line(322, signY-38, 553, signY-38, "0.55 0.59 0.66", 0.7);
+  text(322, signY-50, 7.5, "Nome / assinatura / data", "F1", "0.42 0.46 0.54");
+  line(42, 48, 553, 48, "0.78 0.82 0.88", 0.6);
+  text(42, 33, 7, "Documento gerado pelo sistema de Gestão Patrimonial.", "F1", "0.36 0.41 0.51");
+  text(553-115, 33, 7, "USO ADMINISTRATIVO", "F2", "0.15 0.39 0.96");
+
+  const content = commands.join("\n");
+  const latin1 = str => { const out = new Uint8Array(str.length); for(let i=0;i<str.length;i++){ const c=str.charCodeAt(i); out[i]=c<=255?c:63; } return out; };
+  const streamBytes = latin1(content);
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
+    `<< /Length ${streamBytes.length} >>\nstream\n${content}\nendstream`
+  ];
+  let pdf = "%PDF-1.4\n"; const offsets=[0];
+  objects.forEach((obj,i)=>{ offsets.push(pdf.length); pdf += `${i+1} 0 obj\n${obj}\nendobj\n`; });
+  const xref=pdf.length; pdf += `xref\n0 ${objects.length+1}\n0000000000 65535 f \n` + offsets.slice(1).map(o=>`${String(o).padStart(10,"0")} 00000 n \n`).join("") + `trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  const bytes = new Uint8Array(pdf.length); for(let i=0;i<pdf.length;i++) bytes[i]=pdf.charCodeAt(i)&255;
+  const blob=new Blob([bytes],{type:"application/pdf"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url; a.download=`Termo-Baixa-${value(record.Tombamento).replace(/[^A-Za-z0-9-]/g,"")||"Patrimonial"}.pdf`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
+$("disposalHistorySearch")?.addEventListener("input", renderDisposalHistory);
+$("refreshDisposalHistoryBtn")?.addEventListener("click", renderDisposalHistory);
+
 function disposalAssetSearchText(asset) {
   const sector = sectorLocationData?.sectors?.find(x => String(x.ID_Setor) === String(asset.ID_Setor));
   const person = sectorLocationData?.people?.find(x => String(x.ID_Responsavel) === String(asset.ID_Responsavel));
@@ -692,7 +1012,7 @@ $("confirmDisposalBtn")?.addEventListener("click", async () => {
   try {
     await recordAssetDisposal(pendingDisposal);
     pendingDisposal=null; $("disposalReviewCard").hidden=true; $("disposalForm").reset();
-    setMessage("disposalMessage","Baixa registrada. O bem permanece no cadastro com situação Baixado.","success");
+    setMessage("disposalMessage","Baixa patrimonial registrada com sucesso. Você pode consultar os dados e recuperar o documento em Consultar operações.","success");
     await loadDisposalView(); await refreshDashboard(); await searchAssets();
   } catch(error) {
     setMessage("disposalMessage",`Não foi possível registrar a baixa: ${error.message}`,"error");
@@ -718,18 +1038,23 @@ const referenceConfigs = {
   ]},
   locais: {label:"Local físico",collection:"locais",id:"ID_Local",prefix:"LOC",fields:[
     {key:"ID_Unidade",label:"Unidade",type:"selectData",source:"unidades",sourceId:"ID_Unidade",sourceLabel:"Nome_Unidade",required:true},
-    {key:"ID_Andar",label:"Andar",type:"selectData",source:"andares",sourceId:"ID_Andar",sourceLabel:"Nome_Andar",required:true,filterBy:"ID_Unidade"},
+    {key:"ID_Andar",label:"Andar",type:"selectData",source:"andares",sourceId:"ID_Andar",sourceLabel:"Nome_Andar",required:true,dependsOn:"ID_Unidade",filterField:"ID_Unidade"},
     {key:"Nome_Local_Fisico",label:"Sala / local físico",required:true},
     {key:"Ativo",label:"Ativo",type:"select",options:["Sim","Não"],default:"Sim"}
   ]},
   setores: {label:"Setor",collection:"setores",id:"ID_Setor",prefix:"SET",fields:[
+    {key:"ID_Unidade",label:"Unidade",type:"selectData",source:"unidades",sourceId:"ID_Unidade",sourceLabel:"Nome_Unidade",required:true,derivedFromPlace:true},
+    {key:"ID_Andar",label:"Andar",type:"selectData",source:"andares",sourceId:"ID_Andar",sourceLabel:"Nome_Andar",required:true,dependsOn:"ID_Unidade",filterField:"ID_Unidade",derivedFromPlace:true},
+    {key:"ID_Local_Atual",label:"Local físico",type:"selectData",source:"locais",sourceId:"ID_Local",sourceLabel:"Nome_Local_Fisico",required:true,dependsOn:"ID_Andar",filterField:"ID_Andar"},
     {key:"Nome_Setor",label:"Nome do setor",required:true},
-    {key:"ID_Local_Atual",label:"Local físico atual",type:"selectData",source:"locais",sourceId:"ID_Local",sourceLabel:"Descricao_Local",required:true},
     {key:"Ativo",label:"Ativo",type:"select",options:["Sim","Não"],default:"Sim"}
   ]},
   responsaveis: {label:"Responsável",collection:"responsaveis",id:"ID_Responsavel",prefix:"RESP",fields:[
     {key:"Nome_Completo",label:"Nome completo",required:true},
-    {key:"ID_Setor_Vinculo",label:"Setor vinculado",type:"selectData",source:"setores",sourceId:"ID_Setor",sourceLabel:"Nome_Setor",required:true},
+    {key:"ID_Unidade",label:"Unidade",type:"selectData",source:"unidades",sourceId:"ID_Unidade",sourceLabel:"Nome_Unidade",required:true},
+    {key:"ID_Andar",label:"Andar",type:"selectData",source:"andares",sourceId:"ID_Andar",sourceLabel:"Nome_Andar",required:true,dependsOn:"ID_Unidade",filterField:"ID_Unidade"},
+    {key:"ID_Local_Atual",label:"Local físico",type:"selectData",source:"locais",sourceId:"ID_Local",sourceLabel:"Nome_Local_Fisico",required:true,dependsOn:"ID_Andar",filterField:"ID_Andar"},
+    {key:"ID_Setor_Vinculo",label:"Setor",type:"selectData",source:"setores",sourceId:"ID_Setor",sourceLabel:"Nome_Setor",required:true,dependsOn:"ID_Local_Atual",filterField:"ID_Local_Atual"},
     {key:"Email_Ficticio",label:"E-mail",type:"email"},
     {key:"Responsavel_Oficial_Setor",label:"Responsável oficial do setor",type:"select",options:["Sim","Não"],default:"Não"},
     {key:"Ativo",label:"Ativo",type:"select",options:["Sim","Não"],default:"Sim"}
@@ -748,6 +1073,7 @@ async function renderReferenceRows() {
   const type=$("referenceType").value, cfg=referenceConfigs[type];
   const cardHost=$("referenceTypeCards");
   if(cardHost){
+    const newBtn = $("newReferenceBtn");
     cardHost.replaceChildren();
     for(const [key,item] of Object.entries(referenceConfigs)){
       const b=document.createElement("button");
@@ -760,13 +1086,38 @@ async function renderReferenceRows() {
       });
       cardHost.append(b);
     }
+    if (newBtn) {
+      const labels = {categorias:"Nova categoria", unidades:"Nova unidade", andares:"Novo andar", locais:"Novo local físico", setores:"Novo setor", responsaveis:"Novo responsável"};
+      newBtn.textContent = labels[type] || "Novo cadastro";
+      const activeIndex = Object.keys(referenceConfigs).indexOf(type);
+      const buttonRow = $("referenceNewButtonRow");
+      if (buttonRow) buttonRow.style.setProperty("--active-index", String(Math.max(0, activeIndex)));
+    }
   }
   referenceRows=await getCollectionRows(cfg.collection);
+  referenceRelated={};
+  for(const field of cfg.fields.filter(f=>f.type==="selectData")) referenceRelated[field.source]=await getCollectionRows(field.source);
   const head=$("referenceTableHead"), body=$("referenceTableBody");
   head.replaceChildren(); body.replaceChildren();
-  const cols=[cfg.id,...cfg.fields.slice(0,3).map(f=>f.key),"__actions"];
+  const fieldLabels = Object.fromEntries(cfg.fields.map(f => [f.key, f.label]));
+  // Exibe setor com sua localização completa para evitar ambiguidades entre setores homônimos.
+  if(type==="responsaveis"){
+    const sectors=referenceRelated.setores||[];
+    const places=referenceRelated.locais||[];
+    const floors=referenceRelated.andares||[];
+    const units=referenceRelated.unidades||[];
+    const mapBy=(rows,key)=>new Map(rows.map(r=>[String(r[key]),r]));
+    const sm=mapBy(sectors,"ID_Setor"), pm=mapBy(places,"ID_Local"), fm=mapBy(floors,"ID_Andar"), um=mapBy(units,"ID_Unidade");
+    referenceRelated.setores=sectors.map(sec=>{
+      const place=pm.get(String(sec.ID_Local_Atual||sec.ID_Local_Referencia||""));
+      const floor=fm.get(String(place?.ID_Andar||sec.ID_Andar||""));
+      const unit=um.get(String(sec.ID_Unidade||floor?.ID_Unidade||place?.ID_Unidade||""));
+      return {...sec,__label:[sec.Nome_Setor,unit?.Nome_Unidade,floor?.Nome_Andar,place?.Nome_Local_Fisico].filter(Boolean).join(" — ")};
+    });
+  }
+  const cols=type==="categorias"?["Nome_Categoria","Descricao","Ativa","__actions"]:type==="unidades"?["Nome_Unidade","Descricao","Ativa","__actions"]:type==="andares"?["Nome_Andar","ID_Unidade","Ativo","__actions"]:type==="locais"?["Nome_Local_Fisico","ID_Andar","Ativo","__actions"]:type==="setores"?["Nome_Setor","ID_Local_Atual","Ativo","__actions"]:["Nome_Completo","ID_Setor_Vinculo","Email_Ficticio","__actions"];
   const trh=document.createElement("tr");
-  for(const key of cols){const th=document.createElement("th");th.textContent=key==="__actions"?"Ações":key;trh.append(th);}
+  for(const key of cols){const th=document.createElement("th");th.textContent=key==="__actions"?"Ações":(fieldLabels[key]||key);trh.append(th);}
   head.append(trh);
   for(const row of referenceRows){
     const tr=document.createElement("tr");
@@ -775,7 +1126,31 @@ async function renderReferenceRows() {
       if(key==="__actions"){
         const btn=document.createElement("button");btn.type="button";btn.className="button button-secondary button-small";btn.textContent="Editar";
         btn.addEventListener("click",()=>openReferenceForm(row));td.append(btn);
-      }else td.textContent=String(row[key]??"");
+      }else {
+        const field=cfg.fields.find(f=>f.key===key);
+        let value=row[key];
+        const units=referenceRelated.unidades || await getCollectionRows("unidades");
+        const floors=referenceRelated.andares || await getCollectionRows("andares");
+        const places=referenceRelated.locais || await getCollectionRows("locais");
+        const sectors=referenceRelated.setores || await getCollectionRows("setores");
+        const unitName=id=>units.find(x=>String(x.ID_Unidade)===String(id))?.Nome_Unidade || "Unidade não informada";
+        const floorName=id=>{const f=floors.find(x=>String(x.ID_Andar)===String(id));return f?`${f.Nome_Andar} — ${unitName(f.ID_Unidade)}`:"Andar não informado"};
+        const placeName=id=>{const l=places.find(x=>String(x.ID_Local)===String(id));return l?`${l.Nome_Local_Fisico} — ${floorName(l.ID_Andar)}`:"Local não informado"};
+        const sectorName=id=>{const sec=sectors.find(x=>String(x.ID_Setor)===String(id));return sec?`${sec.Nome_Setor} — ${placeName(sec.ID_Local_Atual)}`:"Setor não informado"};
+        if(type==="categorias" && key==="Descricao" && !value) value=`Categoria destinada a bens patrimoniais classificados como ${row.Nome_Categoria||"esta categoria"}.`;
+        if(type==="unidades" && key==="Descricao" && !value) value=`Unidade administrativa para gestão, localização e controle dos bens patrimoniais em ${row.Nome_Unidade||"esta unidade"}.`;
+        if(type==="andares" && key==="ID_Unidade") value=unitName(row.ID_Unidade);
+        if(type==="locais" && key==="ID_Andar") value=floorName(row.ID_Andar);
+        if(type==="setores" && key==="ID_Local_Atual") value=placeName(row.ID_Local_Atual);
+        if(type==="responsaveis" && key==="ID_Setor_Vinculo") value=sectorName(row.ID_Setor_Vinculo);
+        if(field?.type==="selectData") {
+          const related=referenceRelated[field.source] || [];
+          const match=related.find(item=>String(item[field.sourceId])===String(value));
+          value=match?.[field.sourceLabel] ?? value;
+        }
+        if(key.startsWith("ID_") && !["ID_Unidade","ID_Andar","ID_Local_Atual","ID_Setor_Vinculo"].includes(key)) value="";
+        td.textContent=String(value??"");
+      }
       tr.append(td);
     }
     body.append(tr);
@@ -787,37 +1162,98 @@ async function openReferenceForm(row=null) {
   const type=$("referenceType").value,cfg=referenceConfigs[type];
   referenceEditingId=row?.[cfg.id]??null; referenceEditing=Boolean(row);
   $("referenceFormTitle").textContent=row?`Editar ${cfg.label.toLocaleLowerCase("pt-BR")}`:`Novo cadastro — ${cfg.label.toLocaleLowerCase("pt-BR")}`;
-  const fields=$("referenceFields");fields.replaceChildren();
-  referenceRelated={};
+  const fields=$("referenceFields");fields.replaceChildren();referenceRelated={};
+  const collections=[...new Set(cfg.fields.filter(f=>f.type==="selectData").map(f=>f.source))];
+  for(const collection of collections) referenceRelated[collection]=await getCollectionRows(collection);
+  const existingSector = type==="responsaveis" ? referenceRelated.setores?.find(x=>String(x.ID_Setor)===String(row?.ID_Setor_Vinculo)) : null;
+  const existingPlace = (type==="setores" || type==="responsaveis") ? referenceRelated.locais.find(x=>String(x.ID_Local)===String(type==="responsaveis" ? (row?.ID_Local_Atual || existingSector?.ID_Local_Atual) : row?.ID_Local_Atual)) : null;
+  const existingFloor = (type==="setores" || type==="responsaveis") ? referenceRelated.andares.find(x=>String(x.ID_Andar)===String(existingPlace?.ID_Andar || row?.ID_Andar)) : null;
+  const initialValues={...(row||{})};
+  if(type==="setores" || type==="responsaveis"){
+    initialValues.ID_Unidade=row?.ID_Unidade??existingPlace?.ID_Unidade??existingFloor?.ID_Unidade??existingSector?.ID_Unidade??"";
+    initialValues.ID_Andar=row?.ID_Andar??existingPlace?.ID_Andar??"";
+    if(type==="responsaveis") initialValues.ID_Local_Atual=existingPlace?.ID_Local??row?.ID_Local_Atual??"";
+  }
   for(const field of cfg.fields){
     const wrap=document.createElement("div");wrap.className="reference-field";
     const label=document.createElement("label");label.textContent=field.label;label.htmlFor=`ref_${field.key}`;wrap.append(label);
     let input;
     if(field.type==="textarea") input=document.createElement("textarea");
     else if(field.type==="select"||field.type==="selectData"){
-      input=document.createElement("select");input.add(new Option("Selecione", ""));
+      input=document.createElement("select");input.add(new Option(field.dependsOn?"Selecione a etapa anterior":"Selecione", ""));
       if(field.type==="select") for(const opt of field.options) input.add(new Option(opt,opt));
-      else {
-        const rows=await getCollectionRows(field.source);referenceRelated[field.source]=rows;
-        for(const option of rows){
-          const labelText=field.sourceLabel==="Descricao_Local" ? (option.Descricao_Local||`${option.Nome_Unidade||""} — ${option.Nome_Local_Fisico||""}`) : (option[field.sourceLabel]||option[field.sourceId]);
-          input.add(new Option(labelText,option[field.sourceId]));
+      else for(const option of (referenceRelated[field.source]||[])){
+        let labelText=option[field.sourceLabel]||option[field.sourceId];
+        if(field.source==="andares"){
+          const unit=referenceRelated.unidades?.find(u=>String(u.ID_Unidade)===String(option.ID_Unidade));
+          labelText=`${option.Nome_Andar||option.ID_Andar}${unit?` — ${unit.Nome_Unidade}`:""}`;
+        } else if(field.source==="locais") {
+          const floor=referenceRelated.andares?.find(f=>String(f.ID_Andar)===String(option.ID_Andar));
+          const unit=referenceRelated.unidades?.find(u=>String(u.ID_Unidade)===String(option.ID_Unidade||floor?.ID_Unidade));
+          labelText=[unit?.Nome_Unidade,floor?.Nome_Andar,option.Nome_Local_Fisico].filter(Boolean).join(" — ")||option[field.sourceId];
         }
+        input.add(new Option(labelText,option[field.sourceId]));
       }
     } else {input=document.createElement("input");input.type=field.type==="email"?"email":"text";}
     input.id=`ref_${field.key}`;input.name=field.key;input.required=Boolean(field.required);
-    input.value=row?.[field.key]??field.default??"";
-    if(field.filterBy && row?.ID_Unidade){
-      for(const opt of [...input.options]) if(opt.value){
-        const match=(referenceRelated[field.source]||[]).find(x=>String(x[field.sourceId])===String(opt.value));
-        if(match && String(match[field.filterBy])!==String(row.ID_Unidade)) opt.hidden=true;
-      }
-    }
+    input.value=initialValues[field.key]??field.default??"";
+    if(field.derivedFromPlace) input.dataset.derivedFromPlace="true";
     wrap.append(input);fields.append(wrap);
   }
+  const updateCascades=(changedKey="")=>{
+    const unitSelect=$("ref_ID_Unidade"),floorSelect=$("ref_ID_Andar"),placeSelect=$("ref_ID_Local_Atual");
+    if(type==="locais"||type==="setores"||type==="responsaveis"){
+      const unitId=unitSelect?.value||"";
+      if(floorSelect){
+        const previous=floorSelect.value;
+        [...floorSelect.options].slice(1).forEach(opt=>{
+          const floor=(referenceRelated.andares||[]).find(x=>String(x.ID_Andar)===String(opt.value));
+          opt.hidden=Boolean(!unitId||!floor||String(floor.ID_Unidade)!==String(unitId));
+        });
+        if(!unitId||floorSelect.selectedOptions[0]?.hidden) floorSelect.value="";
+        floorSelect.disabled=!unitId;
+        if(changedKey==="ID_Unidade") floorSelect.value="";
+      }
+      if(type==="setores"&&placeSelect){
+        const floorId=floorSelect?.value||"";
+        [...placeSelect.options].slice(1).forEach(opt=>{
+          const place=(referenceRelated.locais||[]).find(x=>String(x.ID_Local)===String(opt.value));
+          const placeFloor=(referenceRelated.andares||[]).find(x=>String(x.ID_Andar)===String(place?.ID_Andar));
+          opt.hidden=Boolean(!floorId||!place||String(place.ID_Andar)!==String(floorId)||String(place.ID_Unidade||placeFloor?.ID_Unidade)!==String(unitId));
+        });
+        if(!floorId||placeSelect.selectedOptions[0]?.hidden) placeSelect.value="";
+        placeSelect.disabled=!floorId;
+        if(changedKey==="ID_Unidade"||changedKey==="ID_Andar") placeSelect.value="";
+      }
+      if(type==="responsaveis"&&placeSelect){
+        const floorId=floorSelect?.value||"";
+        [...placeSelect.options].slice(1).forEach(opt=>{
+          const place=(referenceRelated.locais||[]).find(x=>String(x.ID_Local)===String(opt.value));
+          const placeFloor=(referenceRelated.andares||[]).find(x=>String(x.ID_Andar)===String(place?.ID_Andar));
+          opt.hidden=Boolean(!floorId||!place||String(place.ID_Andar)!==String(floorId)||String(place.ID_Unidade||placeFloor?.ID_Unidade)!==String(unitId));
+        });
+        if(!floorId||placeSelect.selectedOptions[0]?.hidden) placeSelect.value="";
+        placeSelect.disabled=!floorId;
+        if(changedKey==="ID_Unidade"||changedKey==="ID_Andar") placeSelect.value="";
+        const sectorSelect=$("ref_ID_Setor_Vinculo"), placeId=placeSelect.value;
+        if(sectorSelect){
+          [...sectorSelect.options].slice(1).forEach(opt=>{
+            const sector=(referenceRelated.setores||[]).find(x=>String(x.ID_Setor)===String(opt.value));
+            opt.hidden=Boolean(!placeId||!sector||String(sector.ID_Local_Atual)!==String(placeId)||String(sector.ID_Unidade)!==String(unitId));
+          });
+          if(!placeId||sectorSelect.selectedOptions[0]?.hidden) sectorSelect.value="";
+          sectorSelect.disabled=!placeId;
+          if(changedKey==="ID_Local_Atual") sectorSelect.value="";
+        }
+      }
+    }
+  };
+  ["ID_Unidade","ID_Andar","ID_Local_Atual"].forEach(key=>$("ref_"+key)?.addEventListener("change",()=>updateCascades(key)));
+  updateCascades();
   $("referenceFormCard").hidden=false;
   $("referenceFormCard").scrollIntoView({behavior:"smooth",block:"center"});
 }
+
 $("referenceType")?.addEventListener("change",()=>{ $("referenceFormCard").hidden=true; renderReferenceRows().catch(e=>setMessage("referenceMessage",e.message,"error")); });
 $("newReferenceBtn")?.addEventListener("click",()=>openReferenceForm().catch(e=>setMessage("referenceMessage",e.message,"error")));
 $("cancelReferenceBtn")?.addEventListener("click",()=>{$("referenceFormCard").hidden=true;referenceEditingId=null;});
@@ -842,6 +1278,34 @@ $("referenceForm")?.addEventListener("submit",async event=>{
     const unit=referenceRelated.unidades?.find(x=>String(x.ID_Unidade)===data.ID_Unidade);
     data.Nome_Unidade=unit?.Nome_Unidade??"";
   }
+  if(type==="setores"){
+    const place=referenceRelated.locais?.find(x=>String(x.ID_Local)===data.ID_Local_Atual);
+    const floor=referenceRelated.andares?.find(x=>String(x.ID_Andar)===data.ID_Andar);
+    const unit=referenceRelated.unidades?.find(x=>String(x.ID_Unidade)===data.ID_Unidade);
+    if(!place||!floor||!unit||String(floor.ID_Unidade)!==String(unit.ID_Unidade)||String(place.ID_Andar)!==String(floor.ID_Andar)){
+      setMessage("referenceMessage","A localização selecionada não corresponde à hierarquia da unidade. Confira unidade, andar e local físico.","error");return;
+    }
+    data.ID_Unidade=unit.ID_Unidade;data.ID_Andar=floor.ID_Andar;
+    data.Nome_Unidade=unit.Nome_Unidade;data.Nome_Andar=floor.Nome_Andar;
+    data.Nome_Local_Fisico=place.Nome_Local_Fisico;
+  }
+  if(type==="responsaveis"){
+    const place=referenceRelated.locais?.find(x=>String(x.ID_Local)===data.ID_Local_Atual);
+    const floor=referenceRelated.andares?.find(x=>String(x.ID_Andar)===data.ID_Andar);
+    const unit=referenceRelated.unidades?.find(x=>String(x.ID_Unidade)===data.ID_Unidade);
+    const sector=referenceRelated.setores?.find(x=>String(x.ID_Setor)===data.ID_Setor_Vinculo);
+    if(!unit||!floor||!place||!sector||
+      String(floor.ID_Unidade)!==String(unit.ID_Unidade)||
+      String(place.ID_Andar)!==String(floor.ID_Andar)||
+      String(place.ID_Unidade||floor.ID_Unidade)!==String(unit.ID_Unidade)||
+      String(sector.ID_Local_Atual)!==String(place.ID_Local)||
+      String(sector.ID_Unidade)!==String(unit.ID_Unidade)){
+      setMessage("referenceMessage","O setor selecionado não pertence à unidade, andar e local físico informados. Confira a hierarquia.","error");return;
+    }
+    data.ID_Unidade=unit.ID_Unidade; data.ID_Andar=floor.ID_Andar; data.ID_Local_Atual=place.ID_Local;
+    data.Nome_Unidade=unit.Nome_Unidade; data.Nome_Andar=floor.Nome_Andar;
+    data.Nome_Local_Fisico=place.Nome_Local_Fisico; data.Nome_Setor=sector.Nome_Setor;
+  }
   const creating=!referenceEditing;
   const id=referenceEditingId || `${cfg.prefix}${String(Date.now()).slice(-8)}`;
   try{
@@ -853,6 +1317,7 @@ $("referenceForm")?.addEventListener("submit",async event=>{
 });
 
 
+let assetAutocompleteRows = [];
 let assetFormMode = "create";
 let assetFormOriginal = null;
 let assetFormReferences = {categories:[],sectors:[],people:[],places:[],floors:[],units:[]};
@@ -868,6 +1333,19 @@ function formatCurrencyInput(value) {
   if(value===null||value===undefined||value==="") return "";
   return Number(value).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 }
+
+function applyCentMask(input) {
+  if(!input || input.dataset.centMaskBound==="1") return;
+  input.dataset.centMaskBound="1";
+  input.addEventListener("input",()=>{
+    const digits=input.value.replace(/\D/g,"");
+    if(!digits){input.value="";return;}
+    input.value=(Number(digits)/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+    try{input.setSelectionRange(input.value.length,input.value.length);}catch{}
+  });
+  input.addEventListener("blur",()=>{if(input.value.trim())input.value=formatCurrencyInput(parseCurrencyInput(input.value));});
+}
+document.querySelectorAll('input[id*="Value"], input[id*="Valor"], input[data-money="true"]').forEach(applyCentMask);
 function showDuplicateTombamentoAction(tombamento) {
   const message = $("assetFormMessage");
   if (!message) return;
@@ -902,9 +1380,10 @@ async function loadAssetFormReferences() {
   ]);
   assetFormReferences={categories,sectors,people,places,floors,units};
   fillAssetSelect("newAssetCategory",categories,"ID_Categoria","Nome_Categoria");
-  fillAssetSelect("newAssetSector",sectors.filter(x=>x.Ativo!=="Não"&&x.Ativo!==false),"ID_Setor","Nome_Setor");
-  fillAssetSelect("newAssetResponsible",people.filter(x=>x.Ativo!=="Não"&&x.Ativo!==false),"ID_Responsavel","Nome_Completo");
-  updateAssetLocationPreview();
+  fillAssetSelect("newAssetUnit",units.filter(x=>x.Ativo!=="Não"&&x.Ativo!==false),"ID_Unidade","Nome_Unidade");
+  fillAssetSelect("newAssetSector",[],"ID_Setor","Nome_Setor");
+  fillAssetSelect("newAssetResponsible",[],"ID_Responsavel","Nome_Completo");
+  updateAssetSectorsForUnit();
 }
 function fillAssetSelect(id,rows,valueKey,labelKey) {
   const select=$(id), previous=select.value;
@@ -912,19 +1391,34 @@ function fillAssetSelect(id,rows,valueKey,labelKey) {
   for(const row of rows) select.add(new Option(row[labelKey]||row[valueKey],String(row[valueKey])));
   if([...select.options].some(o=>o.value===previous)) select.value=previous;
 }
+function getUnitIdForSector(sector) {
+  const place=assetFormReferences.places.find(x=>String(x.ID_Local)===String(sector?.ID_Local_Atual??sector?.ID_Local_Referencia??""));
+  const floor=assetFormReferences.floors.find(x=>String(x.ID_Andar)===String(place?.ID_Andar??""));
+  return String(place?.ID_Unidade??floor?.ID_Unidade??"");
+}
+function updateAssetSectorsForUnit(preferredSector="") {
+  const unitId=$("newAssetUnit").value;
+  const sectors=assetFormReferences.sectors.filter(x=>(x.Ativo!=="Não"&&x.Ativo!==false)&&getUnitIdForSector(x)===String(unitId));
+  fillAssetSelect("newAssetSector",sectors,"ID_Setor","Nome_Setor");
+  if(preferredSector && sectors.some(x=>String(x.ID_Setor)===String(preferredSector))) $("newAssetSector").value=String(preferredSector);
+  updateAssetLocationPreview();
+}
 function updateAssetLocationPreview() {
   const sector=assetFormReferences.sectors.find(x=>String(x.ID_Setor)===$("newAssetSector").value);
-  $("newAssetLocationPreview").textContent=getSectorLocation(sector);
-  const allowed=assetFormReferences.people.filter(p=>String(p.ID_Setor_Vinculo??"")===String(sector?.ID_Setor??"")&&(p.Ativo!=="Não"&&p.Ativo!==false));
-  const current=$("newAssetResponsible").value;
-  if(sector && allowed.length) {
-    fillAssetSelect("newAssetResponsible",allowed,"ID_Responsavel","Nome_Completo");
-    if(allowed.some(p=>String(p.ID_Responsavel)===current)) $("newAssetResponsible").value=current;
-  } else {
-    fillAssetSelect("newAssetResponsible",assetFormReferences.people.filter(p=>p.Ativo!=="Não"&&p.Ativo!==false),"ID_Responsavel","Nome_Completo");
-    if(current) $("newAssetResponsible").value=current;
+  const unitId=$("newAssetUnit").value;
+  const actualUnit=getUnitIdForSector(sector);
+  if(sector && unitId && actualUnit!==unitId) {
+    $("newAssetLocationPreview").textContent="O setor não pertence à unidade selecionada.";
+    fillAssetSelect("newAssetResponsible",[],"ID_Responsavel","Nome_Completo");
+    return;
   }
+  $("newAssetLocationPreview").textContent=sector?getSectorLocation(sector):"Selecione uma unidade e um setor para consultar a localização.";
+  const allowed=assetFormReferences.people.filter(p=>String(p.ID_Setor_Vinculo??p.ID_Setor??"")===String(sector?.ID_Setor??"")&&(p.Ativo!=="Não"&&p.Ativo!==false));
+  const current=$("newAssetResponsible").value;
+  fillAssetSelect("newAssetResponsible",allowed,"ID_Responsavel","Nome_Completo");
+  if(allowed.some(p=>String(p.ID_Responsavel)===current)) $("newAssetResponsible").value=current;
 }
+
 async function openAssetForm(tombamento=null) {
   await loadAssetFormReferences();
   const existing=tombamento===null?null:(await getCollectionRows("bens")).find(a=>String(a.Tombamento)===String(tombamento));
@@ -939,8 +1433,9 @@ async function openAssetForm(tombamento=null) {
   $("newAssetBrand").value=existing?.Marca??"";
   $("newAssetModel").value=existing?.Modelo??"";
   $("newAssetSerial").value=existing?.Numero_Serie??"";
-  $("newAssetSector").value=existing?.ID_Setor??"";
-  updateAssetLocationPreview();
+  const existingSector=assetFormReferences.sectors.find(x=>String(x.ID_Setor)===String(existing?.ID_Setor??""));
+  $("newAssetUnit").value=existingSector?getUnitIdForSector(existingSector):"";
+  updateAssetSectorsForUnit(existing?.ID_Setor??"");
   $("newAssetResponsible").value=existing?.ID_Responsavel??"";
   $("newAssetAcquisitionDate").value=existing?.Data_Aquisicao??"";
   $("newAssetAcquisitionValue").value=formatCurrencyInput(existing?.Valor_Aquisicao);
@@ -950,6 +1445,7 @@ async function openAssetForm(tombamento=null) {
   $("cancelAssetEditBtn").hidden=!existing;
   activateView("assetFormView");
 }
+$("newAssetUnit")?.addEventListener("change",()=>{ updateAssetSectorsForUnit(); });
 $("newAssetSector")?.addEventListener("change",updateAssetLocationPreview);
 $("cancelAssetEditBtn")?.addEventListener("click",()=>{assetFormOriginal=null;assetFormMode="create";$("assetForm").reset();$("newAssetTombamento").readOnly=false;$("assetFormTitle").textContent="Cadastrar bem patrimonial";$("saveAssetBtn").textContent="Salvar bem";$("cancelAssetEditBtn").hidden=true;setMessage("assetFormMessage","Edição cancelada.");});
 $("assetForm")?.addEventListener("submit",async event=>{
@@ -958,10 +1454,14 @@ $("assetForm")?.addEventListener("submit",async event=>{
   const tombamento=$("newAssetTombamento").value.trim();
   const description=$("newAssetDescription").value.trim();
   const category=$("newAssetCategory").value;
+  const unitId=$("newAssetUnit").value;
   const sectorId=$("newAssetSector").value;
   const responsible=$("newAssetResponsible").value;
-  if(!tombamento||!description||!category||!sectorId||!responsible){setMessage("assetFormMessage","Preencha tombamento, descrição, categoria, setor e responsável.","error");return;}
+  if(!tombamento||!description||!category||!unitId||!sectorId||!responsible){setMessage("assetFormMessage","Preencha tombamento, descrição, categoria, unidade, setor e responsável.","error");return;}
   const sector=assetFormReferences.sectors.find(x=>String(x.ID_Setor)===sectorId);
+  if(getUnitIdForSector(sector)!==String(unitId)){setMessage("assetFormMessage","O setor selecionado não pertence à unidade informada.","error");return;}
+  const person=assetFormReferences.people.find(x=>String(x.ID_Responsavel)===String(responsible));
+  if(!person || String(person.ID_Setor_Vinculo??person.ID_Setor??"")!==String(sectorId)){setMessage("assetFormMessage","Selecione um responsável vinculado ao setor escolhido.","error");return;}
   const location=getSectorLocation(sector);
   if(location.startsWith("Localização incompleta")||location.startsWith("Localização não cadastrada")){setMessage("assetFormMessage","O setor selecionado não possui localização completa. Corrija o cadastro do setor antes de salvar o bem.","error");return;}
   const value=parseCurrencyInput($("newAssetAcquisitionValue").value);
@@ -1208,6 +1708,113 @@ function renderImportResult(result) {
     : "Corrija os problemas indicados e valide novamente.", result.ok ? "success" : "error");
 }
 
+
+// Consulta unificada de transferências e baixas, com filtros combinados e paginação.
+let operationsSearchPage = 1;
+let operationsSearchCache = [];
+async function searchOperations() {
+  const host = $("operationsResults");
+  const pagination = $("operationsPagination");
+  if (!host) return;
+  host.replaceChildren(); pagination.hidden = true;
+  const [moves, disposals, assets, sectors, people] = await Promise.all([
+    getCollectionRows("movimentacoes"), getCollectionRows("baixas"), getCollectionRows("bens"),
+    getCollectionRows("setores"), getCollectionRows("responsaveis")
+  ]);
+  window.__operationsSectors = sectors; window.__operationsPeople = people;
+  const type = $("operationsType").value;
+  const q = id => ($(id)?.value || "").trim().toLocaleLowerCase("pt-BR");
+  const from = $("operationsDateFrom").value ? new Date($("operationsDateFrom").value + "T00:00:00") : null;
+  const to = $("operationsDateTo").value ? new Date($("operationsDateTo").value + "T23:59:59") : null;
+  const rows = [];
+  if (type !== "BAIXA") moves.filter(r => r.tipo === "TRANSFERENCIA").forEach(r => {
+    const asset = assets.find(a => String(a.Tombamento) === String(r.Tombamento || r.assetSnapshot?.Tombamento));
+    rows.push({type:"TRANSFERENCIA", record:r, asset, date:new Date(r.transferDate || r.criadoEm || 0), sector:[r.setorOrigemNome,r.setorDestinoNome].filter(Boolean).join(" → "), responsible:[r.originResponsibleSnapshot?.Nome_Completo,r.destinationResponsibleSnapshot?.Nome_Completo,r.issuerSnapshot?.name].filter(Boolean).join(" "), reason:r.motivo || "", document:r.transferId || r.documento || ""});
+  });
+  if (type !== "TRANSFERENCIA") disposals.forEach(r => {
+    const asset = assets.find(a => String(a.Tombamento) === String(r.Tombamento));
+    const sector = sectors.find(x => String(x.ID_Setor) === String(r.setorId || asset?.ID_Setor));
+    const person = people.find(x => String(x.ID_Responsavel) === String(r.responsavelId || asset?.ID_Responsavel));
+    rows.push({type:"BAIXA",record:r,asset,date:new Date(r.criadoEm || r.dataHora || r.timestamp || 0),sector:sector?.Nome_Setor || "",responsible:person?.Nome_Completo || "",reason:r.motivo || "",document:r.documentoAutorizacao || r.numeroDocumento || ""});
+  });
+  // Autocompletar dos filtros textuais: sugestões extraídas do histórico completo.
+  const assetText = row => {
+    const a = row.asset || row.record.assetSnapshot || {};
+    return [row.record.Descricao_Bem, a.Descricao_Bem, a.Marca, a.Modelo].filter(Boolean);
+  };
+  const assetIds = row => {
+    const a = row.asset || row.record.assetSnapshot || {};
+    return [row.record.Tombamento, a.Tombamento, a.Numero_Serie].filter(Boolean);
+  };
+  const suggestionSets = {
+    operationsDocument: rows.flatMap(row => [row.document, row.record.documentoAutorizacao, row.record.transferId, row.record.numeroDocumento]).filter(Boolean),
+    operationsAsset: rows.flatMap(assetIds),
+    operationsDescription: rows.flatMap(assetText),
+    operationsSector: [...sectors.map(item => item.Nome_Setor), ...rows.flatMap(row => [row.record.setorOrigemNome, row.record.setorDestinoNome, row.sector])].filter(Boolean),
+    operationsResponsible: [...people.map(item => item.Nome_Completo), ...rows.flatMap(row => [row.record.originResponsibleSnapshot?.Nome_Completo, row.record.destinationResponsibleSnapshot?.Nome_Completo, row.record.issuerSnapshot?.name, row.responsible])].filter(Boolean),
+    operationsReason: rows.map(row => row.reason).filter(Boolean)
+  };
+  Object.entries(suggestionSets).forEach(([inputId, values]) => {
+    const list = $(inputId + "Suggestions");
+    if (!list) return;
+    const unique = [...new Set(values.map(value => String(value).trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+    list.replaceChildren();
+    unique.forEach(value => { const option = document.createElement("option"); option.value = value; list.append(option); });
+  });
+
+  operationsSearchCache = rows.filter(row => {
+    const asset = row.asset || row.record.assetSnapshot || {};
+    const desc = [row.record.Descricao_Bem,asset.Descricao_Bem,asset.Marca,asset.Modelo].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    const tomb = [row.record.Tombamento,asset.Tombamento,asset.Numero_Serie].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    const doc = [row.document,row.record.documentoAutorizacao,row.record.transferId].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    return (!q("operationsDocument") || doc.includes(q("operationsDocument"))) && (!q("operationsAsset") || tomb.includes(q("operationsAsset"))) && (!q("operationsDescription") || desc.includes(q("operationsDescription"))) && (!q("operationsSector") || row.sector.toLocaleLowerCase("pt-BR").includes(q("operationsSector"))) && (!q("operationsResponsible") || row.responsible.toLocaleLowerCase("pt-BR").includes(q("operationsResponsible"))) && (!q("operationsReason") || row.reason.toLocaleLowerCase("pt-BR").includes(q("operationsReason"))) && (!from || row.date >= from) && (!to || row.date <= to);
+  }).sort((a,b)=>b.date-a.date);
+  operationsSearchPage = 1;
+  renderOperationsSearchPage();
+}
+function renderOperationsSearchPage() {
+  const host=$("operationsResults"), pagination=$("operationsPagination");
+  const size=Number($("operationsPageSize").value || 25), total=operationsSearchCache.length, pages=Math.max(1,Math.ceil(total/size));
+  operationsSearchPage=Math.min(operationsSearchPage,pages); host.replaceChildren();
+  if (!total) { const p=document.createElement("p"); p.className="small-note"; p.textContent="Nenhuma operação corresponde aos filtros informados."; host.append(p); pagination.hidden=true; $("operationsSearchMessage").textContent="0 operações encontradas."; return; }
+  const tableWrap=document.createElement("div"); tableWrap.className="table-wrap"; const table=document.createElement("table");
+  table.innerHTML="<thead><tr><th>Documento</th><th>Tombamento</th><th>Bem patrimonial</th><th>Operação</th><th>Data</th><th>Ações</th></tr></thead><tbody></tbody>";
+  const body=table.querySelector("tbody"), start=(operationsSearchPage-1)*size;
+  operationsSearchCache.slice(start,start+size).forEach(row=>{
+    const tr=document.createElement("tr"), asset=row.asset || row.record.assetSnapshot || {};
+    const values=[row.document || "Não informado",row.record.Tombamento || asset.Tombamento || "—",row.record.Descricao_Bem || asset.Descricao_Bem || "Bem patrimonial",row.type==="TRANSFERENCIA"?"Transferência":"Baixa patrimonial",Number.isNaN(row.date.getTime())?"Data não informada":formatBrazilDateTime(row.date)];
+    values.forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td)});
+    const actions=document.createElement("td"), btn=document.createElement("button"); btn.type="button";btn.className="button button-primary";btn.textContent="Baixar PDF";
+    btn.addEventListener("click",()=>{ if(row.type==="TRANSFERENCIA") downloadTransferTermPdf(row.record); else {const allSectors=window.__operationsSectors||[];const allPeople=window.__operationsPeople||[];const sector=allSectors.find(x=>String(x.ID_Setor)===String(row.record.setorId||asset.ID_Setor));const person=allPeople.find(x=>String(x.ID_Responsavel)===String(row.record.responsavelId||asset.ID_Responsavel));downloadDisposalDocument(row.record,asset,sector,person);} });actions.append(btn);tr.append(actions);body.append(tr);
+  });
+  tableWrap.append(table);host.append(tableWrap);pagination.replaceChildren();pagination.hidden=false;
+  const summary=document.createElement("span");summary.textContent=`Exibindo ${start+1}–${Math.min(start+size,total)} de ${total} operações · Página ${operationsSearchPage} de ${pages}`;pagination.append(summary);
+  const prev=document.createElement("button");prev.type="button";prev.className="button button-secondary";prev.textContent="Anterior";prev.disabled=operationsSearchPage===1;prev.addEventListener("click",()=>{operationsSearchPage--;renderOperationsSearchPage()});
+  const next=document.createElement("button");next.type="button";next.className="button button-secondary";next.textContent="Próxima";next.disabled=operationsSearchPage===pages;next.addEventListener("click",()=>{operationsSearchPage++;renderOperationsSearchPage()});pagination.append(prev,next);
+  $("operationsSearchMessage").textContent=`${total} operação(ões) encontrada(s).`;
+}
+// Carrega as sugestões antes da primeira pesquisa, ao entrar nos campos de filtro.
+// O datalist nativo só tinha opções depois de clicar em Pesquisar, tornando o recurso invisível inicialmente.
+let operationsSuggestionsLoaded = false;
+const operationFilterIds = ["operationsDocument", "operationsAsset", "operationsDescription", "operationsSector", "operationsResponsible", "operationsReason"];
+async function ensureOperationsSuggestions() {
+  if (operationsSuggestionsLoaded) return;
+  await searchOperations();
+  operationsSuggestionsLoaded = true;
+}
+operationFilterIds.forEach(id => {
+  $(id)?.addEventListener("focus", () => {
+    ensureOperationsSuggestions().catch(error => console.error("Falha ao carregar sugestões de operações:", error));
+  }, { once: true });
+});
+$("operationsSearchNavTab")?.addEventListener("click", () => {
+  ensureOperationsSuggestions().catch(error => setMessage("operationsSearchMessage", `Não foi possível carregar sugestões: ${error.message}`, "error"));
+});
+$("searchOperationsBtn")?.addEventListener("click",()=>searchOperations().catch(e=>setMessage("operationsSearchMessage",`Erro na consulta: ${e.message}`,"error")));
+$("operationsPageSize")?.addEventListener("change",renderOperationsSearchPage);
+$("clearOperationsSearchBtn")?.addEventListener("click",()=>{operationsSuggestionsLoaded=false;["operationsDocument","operationsAsset","operationsDescription","operationsSector","operationsResponsible","operationsReason","operationsDateFrom","operationsDateTo"].forEach(id=>$(id).value="");$("operationsType").value="TODAS";operationsSearchPage=1;searchOperations().catch(e=>setMessage("operationsSearchMessage",e.message,"error"));});
+
 document.querySelectorAll(".nav-tab").forEach(button => button.addEventListener("click", async () => {
   activateView(button.dataset.view);
   if (button.dataset.view === "reportView") {
@@ -1258,6 +1865,22 @@ $("exportReportPdf").addEventListener("click", exportGeneralReportPdf);
   });
 });
 
+$("assetSearch")?.addEventListener("input", event => {
+  selectedAssetSearchTombamento = "";
+  const rows = assetAutocompleteRows.map(asset => ({value:String(asset.Tombamento), asset}));
+  showSearchResults("assetSearchResults", rows, event.target.value,
+    row => `${row.asset.Tombamento || "Sem tombamento"} — ${row.asset.Descricao_Bem || "Bem sem descrição"}`,
+    row => [row.asset.Numero_Serie ? `Série: ${row.asset.Numero_Serie}` : "", row.asset.Marca, row.asset.Modelo, row.asset.Situacao || row.asset.situacao].filter(Boolean).join(" · "),
+    row => {
+      selectedAssetSearchTombamento = String(row.asset.Tombamento || "");
+      $("assetSearch").value = `${row.asset.Tombamento || ""} — ${row.asset.Descricao_Bem || ""}`.trim();
+      $("assetSearchResults").replaceChildren();
+      searchAssets();
+    }, "");
+});
+$("assetSearch")?.addEventListener("focus", () => {
+  if ($("assetSearch").value.trim()) $("assetSearch").dispatchEvent(new Event("input", {bubbles:true}));
+});
 $("searchBtn").addEventListener("click", searchAssets);
 $("assetSearch").addEventListener("keydown", event => { if (event.key === "Enter") searchAssets(); });
 $("categoryFilter").addEventListener("change", searchAssets);
@@ -1291,7 +1914,94 @@ $("commitImportBtn").addEventListener("click", async () => {
   }
 });
 
+// Autocompletar institucional e persistência das configurações locais.
+let registeredResponsibleRows = [];
+let selectedManagerId = "";
+let selectedIssuerPersonId = "";
+function renderResponsibleSuggestions(inputId, boxId, onSelect) {
+  const input = $(inputId), box = $(boxId);
+  if (!input || !box) return;
+  const query = input.value.trim().toLocaleLowerCase("pt-BR");
+  box.replaceChildren();
+  if (!query) { box.hidden = true; input.setAttribute("aria-expanded", "false"); return; }
+  const matches = registeredResponsibleRows.filter(p => p.Ativo !== "Não" && p.Ativo !== false &&
+    String(p.Nome_Completo || "").toLocaleLowerCase("pt-BR").includes(query)).slice(0, 8);
+  for (const p of matches) {
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "responsible-suggestion-card";
+    const title = document.createElement("strong"); title.textContent = p.Nome_Completo || "";
+    const meta = document.createElement("span");
+    meta.textContent = [p.Cargo || p.Funcao || p["Função"], p.Unidade_Nome || p.Nome_Unidade, p.Setor_Nome || p.Nome_Setor].filter(Boolean).join(" · ") || `Cadastro ${p.ID_Responsavel ?? ""}`;
+    button.append(title, meta);
+    button.addEventListener("click", () => { input.value = p.Nome_Completo || ""; onSelect(p); box.hidden = true; input.setAttribute("aria-expanded", "false"); });
+    box.append(button);
+  }
+  box.hidden = matches.length === 0;
+  input.setAttribute("aria-expanded", String(matches.length > 0));
+}
+async function loadInstitutionalSettings() {
+  const data = readLocalJson(INSTITUTIONAL_KEY, {});
+  selectedManagerId = String(data.responsibleId || "");
+  if ($("patrimonyManagerName")) {
+    $("patrimonyManagerName").value = data.name || "";
+    $("patrimonyManagerRole").value = data.role || "";
+    $("patrimonyManagerUnit").value = data.unit || "";
+    $("patrimonyManagerRegistration").value = data.registration || "";
+  }
+  renderIssuers();
+  try {
+    registeredResponsibleRows = await getCollectionRows("responsaveis");
+    const manager = registeredResponsibleRows.find(p => String(p.ID_Responsavel ?? "") === selectedManagerId || p.Nome_Completo === data.name);
+    if (manager) selectedManagerId = String(manager.ID_Responsavel ?? "");
+  } catch (error) { console.warn("Não foi possível carregar responsáveis cadastrados", error); }
+}
+$("patrimonyManagerName")?.addEventListener("input", () => {
+  selectedManagerId = "";
+  renderResponsibleSuggestions("patrimonyManagerName", "patrimonyManagerSuggestions", p => {
+    selectedManagerId = String(p.ID_Responsavel ?? "");
+    $("patrimonyManagerRole").value = p.Cargo || p.Funcao || p["Função"] || $("patrimonyManagerRole").value;
+    $("patrimonyManagerUnit").value = p.Unidade_Nome || p.Nome_Unidade || $("patrimonyManagerUnit").value;
+    $("patrimonyManagerRegistration").value = p.Matricula || p["Matrícula"] || p.Registro || $("patrimonyManagerRegistration").value;
+  });
+});
+$("issuerName")?.addEventListener("input", () => {
+  selectedIssuerPersonId = "";
+  renderResponsibleSuggestions("issuerName", "issuerNameSuggestions", p => {
+    selectedIssuerPersonId = String(p.ID_Responsavel ?? "");
+    $("issuerRole").value = p.Cargo || p.Funcao || p["Função"] || $("issuerRole").value;
+    $("issuerRegistration").value = p.Matricula || p["Matrícula"] || p.Registro || $("issuerRegistration").value;
+  });
+});
+document.addEventListener("click", event => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return;
+  for (const [inputId, boxId] of [["patrimonyManagerName", "patrimonyManagerSuggestions"], ["issuerName", "issuerNameSuggestions"]]) {
+    if (!target.closest(`#${inputId}`) && !target.closest(`#${boxId}`)) { const box = $(boxId); if (box) box.hidden = true; }
+  }
+});
+$("institutionalSettingsForm")?.addEventListener("submit", event => {
+  event.preventDefault();
+  const name = $("patrimonyManagerName").value.trim();
+  const person = registeredResponsibleRows.find(p => String(p.ID_Responsavel ?? "") === String(selectedManagerId) || p.Nome_Completo === name);
+  if (!person) { setMessage("institutionalSettingsMessage", "Selecione um responsável cadastrado na lista de sugestões antes de salvar.", "error"); return; }
+  const data = { responsibleId: String(person.ID_Responsavel ?? ""), name: person.Nome_Completo || name, role: $("patrimonyManagerRole").value.trim(), unit: $("patrimonyManagerUnit").value.trim(), registration: $("patrimonyManagerRegistration").value.trim() };
+  saveLocalJson(INSTITUTIONAL_KEY, data); selectedManagerId = data.responsibleId;
+  setMessage("institutionalSettingsMessage", "Responsável pelo Patrimônio salvo com sucesso.", "success");
+});
+$("transferIssuerForm")?.addEventListener("submit", event => {
+  event.preventDefault();
+  const name = $("issuerName").value.trim();
+  const person = registeredResponsibleRows.find(p => String(p.ID_Responsavel ?? "") === String(selectedIssuerPersonId) || p.Nome_Completo === name);
+  if (!person) { setMessage("issuerMessage", "Selecione um responsável cadastrado na lista de sugestões.", "error"); return; }
+  const issuers = readLocalJson(ISSUERS_KEY, []), id = String(person.ID_Responsavel ?? Date.now());
+  if (issuers.some(x => String(x.responsibleId) === id && x.active !== false)) { setMessage("issuerMessage", "Este responsável já está cadastrado como emissor ativo.", "error"); return; }
+  issuers.push({ id: `issuer-${id}`, responsibleId: id, name: person.Nome_Completo || name, role: $("issuerRole").value.trim(), registration: $("issuerRegistration").value.trim(), active: true });
+  saveLocalJson(ISSUERS_KEY, issuers); renderIssuers(); $("transferIssuerForm").reset();
+  setMessage("issuerMessage", "Emissor autorizado cadastrado com sucesso.", "success");
+});
+
 // Inicialização pública: não há autenticação nem conexão com banco remoto.
+loadInstitutionalSettings();
 currentUser = { uid: "demo-local", email: "Demonstração local" };
 currentProfile = { perfil: "ADM" };
 showApp();

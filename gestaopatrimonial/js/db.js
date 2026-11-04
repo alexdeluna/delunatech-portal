@@ -122,6 +122,7 @@ export async function recordAssetTransfer({ asset, destinationSector, destinatio
   const store = readStore(); const id = String(asset.Tombamento);
   const currentAsset = rows(store,"bens").find(item => String(item.Tombamento) === id);
   if (!currentAsset) throw new Error("O bem selecionado não foi encontrado na base local.");
+  if (rows(store,"saidas").some(x => String(x.Tombamento) === id && !x.dataRetorno)) throw new Error("Este bem está fora da unidade. Registre o retorno antes de transferi-lo.");
   const originSector = rows(store,"setores").find(item => String(item.ID_Setor) === String(currentAsset.ID_Setor));
   const originSectorName = originSector?.Nome_Setor ?? currentAsset.ID_Setor ?? "";
   const updated = { ...currentAsset, ID_Setor:destinationSector.ID_Setor, ID_Responsavel:destinationResponsible?.ID_Responsavel ?? currentAsset.ID_Responsavel ?? "", atualizadoEm:new Date().toISOString() };
@@ -133,10 +134,39 @@ export async function recordAssetDisposal({ asset, reason, documentNumber, notes
   const store = readStore(); const id = String(asset.Tombamento);
   const currentAsset = rows(store,"bens").find(item => String(item.Tombamento) === id);
   if (!currentAsset) throw new Error("O bem selecionado não foi encontrado na base local.");
+  if (rows(store,"saidas").some(x => String(x.Tombamento) === id && !x.dataRetorno)) throw new Error("Este bem está fora da unidade. Registre o retorno antes de efetuar a baixa.");
   upsert(store,"bens",id,{ ...currentAsset, Situacao:"Baixado", atualizadoEm:new Date().toISOString() },false);
   addEvent(store,"baixas",{ Tombamento:id, Descricao_Bem:asset.Descricao_Bem ?? "", categoriaId:asset.ID_Categoria ?? "", setorId:asset.ID_Setor ?? "", responsavelId:asset.ID_Responsavel ?? "", situacaoAnterior:asset.Situacao ?? "Ativo", situacaoNova:"Baixado", motivo:reason, documentoAutorizacao:documentNumber ?? "", observacoes:notes ?? "", criadoPor:"demo-local", usuarioEmail:"Demonstração local" });
   audit(store,{ Tombamento:id, operacao:"BAIXA_PATRIMONIAL", resumo:`Baixa patrimonial do bem ${id}`, motivo:reason, documentoAutorizacao:documentNumber ?? "", observacoes:notes ?? "" }); writeStore(store);
 }
+export async function recordAssetExit(data) {
+  const store = readStore(); const id = String(data.Tombamento);
+  const asset = rows(store,"bens").find(x => String(x.Tombamento) === id);
+  if (!asset) throw new Error("Bem não encontrado na base local.");
+  if (String(asset.Situacao).toLowerCase() === "baixado") throw new Error("Não é possível registrar saída de um bem baixado.");
+  if (rows(store,"saidas").some(x => String(x.Tombamento) === id && !x.dataRetorno)) throw new Error("Este bem já possui uma saída em aberto.");
+  const category=rows(store,"categorias").find(x=>String(x.ID_Categoria)===String(asset.ID_Categoria));
+  const sector=rows(store,"setores").find(x=>String(x.ID_Setor)===String(asset.ID_Setor));
+  const placeId=String(sector?.ID_Local_Atual??sector?.ID_Local_Referencia??asset.ID_Local??"");
+  const place=rows(store,"locais").find(x=>String(x.ID_Local)===placeId);
+  const floor=rows(store,"andares").find(x=>String(x.ID_Andar)===String(place?.ID_Andar??""));
+  const unitId=String(place?.ID_Unidade??floor?.ID_Unidade??asset.ID_Unidade??"");
+  const unit=rows(store,"unidades").find(x=>String(x.ID_Unidade)===unitId);
+  const person=rows(store,"responsaveis").find(x=>String(x.ID_Responsavel)===String(asset.ID_Responsavel));
+  const snapshot={...asset, categoriaNome:category?.Nome_Categoria||"", setorNome:sector?.Nome_Setor||"", unidadeNome:unit?.Nome_Unidade||"", andarNome:floor?.Nome_Andar||"", localNome:place?.Nome_Local_Fisico||"", responsavelNome:person?.Nome_Completo||""};
+  const docDate=String(data.dataSaida||new Date().toISOString().slice(0,10)).replace(/\D/g,"");
+  const docNumber=data.documentoNumero||`SAI-${docDate}-${String(Date.now()).slice(-5)}`;
+  const record = addEvent(store,"saidas",{ ...data, documentoNumero:docNumber, Tombamento:id, Descricao_Bem:asset.Descricao_Bem, Numero_Serie:asset.Numero_Serie || "", assetSnapshot:snapshot, unidadeOrigemId:asset.ID_Unidade || "", setorOrigemId:asset.ID_Setor || "", responsavelOrigemId:asset.ID_Responsavel || "", criadoPor:"demo-local" });
+  audit(store,{Tombamento:id,operacao:"SAIDA_BEM",resumo:`Saída ${data.tipo} do bem ${id}`,motivo:data.finalidade || data.tipo}); writeStore(store); return record;
+}
+export async function recordAssetReturn({ exitId, dataRetorno, condicaoRetorno, observacoesRetorno, valorConserto=0, valorServico=0, valorTranslado=0, notaFiscalServico="", responsavelConferenciaRetorno="", observacoesServicoRetorno="" }) {
+  const store = readStore(); const list = rows(store,"saidas").slice(); const index = list.findIndex(x => String(x._id) === String(exitId));
+  if (index < 0) throw new Error("Registro de saída não encontrado.");
+  if (list[index].dataRetorno) throw new Error("Esta saída já foi encerrada.");
+  list[index] = {...list[index], dataRetorno, condicaoRetorno:condicaoRetorno || "Não informado", valorConserto:Number(valorConserto||0), valorServico:Number(valorServico||0), valorTranslado:Number(valorTranslado||0), notaFiscalServico:notaFiscalServico||"", responsavelConferenciaRetorno:responsavelConferenciaRetorno||"", observacoesServicoRetorno:observacoesServicoRetorno||"", observacoesRetorno:observacoesRetorno||"", atualizadoEm:new Date().toISOString()};
+  store.saidas = list; audit(store,{Tombamento:list[index].Tombamento,operacao:"RETORNO_BEM",resumo:`Retorno do bem ${list[index].Tombamento}`}); writeStore(store); return list[index];
+}
+
 export async function saveReferenceRecord(collectionName, id, data, creating = false) {
   const store = readStore(); const key = String(id); const before = rows(store,collectionName).find(row => keyFor(collectionName,row) === key);
   if (creating && before) throw new Error("Já existe um cadastro com este identificador.");
@@ -145,6 +175,8 @@ export async function saveReferenceRecord(collectionName, id, data, creating = f
 export async function saveAssetRecord({ asset, originalTombamento, creating }) {
   const store = readStore(); const id = String(asset.Tombamento ?? "").trim();
   if (!id) throw new Error("Tombamento é obrigatório.");
+  const original = rows(store,"bens").find(item => String(item.Tombamento) === String(originalTombamento || id));
+  if (original && rows(store,"saidas").some(x => String(x.Tombamento) === id && !x.dataRetorno) && (String(original.ID_Setor) !== String(asset.ID_Setor) || String(original.ID_Responsavel) !== String(asset.ID_Responsavel))) throw new Error("Este bem está fora da unidade. Setor e responsável só podem ser alterados após o retorno.");
   if (!creating && rows(store,"bens").some(item => String(item.Tombamento)===String(originalTombamento) && item._demoBase)) throw new Error("Este é um registro original da demonstração e não pode ser editado. Cadastre um novo bem para experimentar.");
   if (creating && rows(store,"bens").some(item => String(item.Tombamento) === id)) throw new Error("Já existe um bem com esse tombamento.");
   if (!creating && String(originalTombamento) !== id) throw new Error("O tombamento não pode ser alterado durante a edição.");
@@ -153,6 +185,8 @@ export async function saveAssetRecord({ asset, originalTombamento, creating }) {
 }
 export async function changeSectorLocation({ sector, destinationPlace, reason, notes, affectedAssetCount, affectedAssets = [] }) {
   const store = readStore(); const id = String(sector.ID_Setor);
+  const blocked = rows(store,"bens").filter(item => String(item.ID_Setor) === id && rows(store,"saidas").some(exit => String(exit.Tombamento) === String(item.Tombamento) && !exit.dataRetorno));
+  if (blocked.length) throw new Error(`Não é possível alterar a localização deste setor: ${blocked.length} bem(ns) ainda está(ão) fora da unidade.`);
   if (rows(store,"setores").some(item => String(item.ID_Setor) === id && item._demoBase)) throw new Error("Este setor pertence à base original da demonstração e não pode ser alterado.");
   upsert(store,"setores",id,{ ...sector, ID_Local_Atual:destinationPlace.ID_Local, atualizadoEm:new Date().toISOString() },false);
   addEvent(store,"movimentacoes",{ tipo:"MUDANCA_LOCALIZACAO_SETOR", setorId:id, setorNome:sector.Nome_Setor ?? "", localOrigemId:sector.ID_Local_Atual ?? sector.ID_Local_Referencia ?? "", localOrigemNome:sector._origemDescricao ?? "", localDestinoId:String(destinationPlace.ID_Local), localDestinoNome:destinationPlace._descricaoCompleta ?? destinationPlace.Descricao_Local ?? destinationPlace.Nome_Local_Fisico ?? "", motivo:reason, observacoes:notes ?? "", quantidadeBensAfetados:affectedAssetCount, bensAfetados:affectedAssets.map(item => String(item.Tombamento ?? "")).filter(Boolean), criadoPor:"demo-local", usuarioEmail:"Demonstração local" });

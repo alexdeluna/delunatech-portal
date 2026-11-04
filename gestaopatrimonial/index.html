@@ -35,6 +35,7 @@
         <button class="nav-tab" data-view="assetsView">Bens Patrimoniais</button>
         <button class="nav-tab" data-view="transferView">Transferir Bem</button>
         <button class="nav-tab" data-view="sectorLocationView" id="sectorLocationNavTab">Localização dos setores</button>
+        <button class="nav-tab" data-view="assetExitView" id="assetExitNavTab">Saída de bens</button>
         <button class="nav-tab" data-view="disposalView" id="disposalNavTab">Baixa patrimonial</button>
         <button class="nav-tab" data-view="operationsSearchView" id="operationsSearchNavTab">Consultar operações</button>
         <button class="nav-tab" data-view="reportView">Relatório Geral</button>
@@ -102,7 +103,7 @@
       </section>
 
       <section id="operationsSearchView" class="view" hidden>
-        <div class="section-heading"><div><p class="eyebrow">CONSULTA DOCUMENTAL</p><h2>Consultar operações</h2><p class="section-description">Pesquise transferências e baixas registradas e baixe novamente seus documentos.</p></div></div>
+        <div class="section-heading"><div><p class="eyebrow">CONSULTA DOCUMENTAL</p><h2>Consultar operações</h2><p class="section-description">Pesquise transferências e baixas patrimoniais e emita novamente seus documentos.</p></div></div>
         <div class="panel">
           <div class="search-grid operations-search-grid">
             <div><label for="operationsType">Tipo de operação</label><select id="operationsType"><option value="TODAS">Todas as operações</option><option value="TRANSFERENCIA">Transferências</option><option value="BAIXA">Baixas patrimoniais</option></select></div>
@@ -254,6 +255,76 @@
           
         </div>
       </section>
+
+      <section id="assetExitView" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">CONTROLE DE SAÍDAS</p><h2>Saída de bens</h2><p class="section-description">Registre empréstimos, manutenções, garantias e outras saídas temporárias. O bem permanece vinculado à sua origem até o retorno.</p></div></div>
+        <div class="metrics">
+          <button class="metric metric-action" id="showExitOpenBtn" type="button" aria-controls="exitOpenListPanel" aria-expanded="false"><span>Bens fora da unidade</span><strong id="exitOpenCount">0</strong><small>Ver bens que ainda não retornaram</small></button>
+          <button class="metric metric-action" id="showExitHistoryBtn" type="button" aria-controls="exitHistoryPanel" aria-expanded="false"><span>Ocorrências registradas</span><strong id="exitTotalCount">0</strong><small>Consultar histórico completo</small></button>
+          <article class="metric"><span>Custos acumulados</span><strong id="exitTotalCost">R$ 0,00</strong></article>
+        </div>
+        <section id="exitOpenListPanel" class="panel exit-list-panel" hidden>
+          <div class="modal-heading"><div><h3>Bens fora da unidade</h3><p class="small-note">Saídas que ainda aguardam registro de retorno.</p></div><button class="button button-secondary" type="button" data-close-exit-panel>Fechar</button></div>
+          <div class="exit-list-filters" data-exit-filter="open">
+            <div class="exit-filter-search"><label for="exitOpenSearch">Pesquisar patrimônio</label><input id="exitOpenSearch" type="search" placeholder="Tombamento, descrição, série, destino ou transportador"></div>
+            <div class="exit-filter-fields"><div><label for="exitOpenType">Tipo de saída</label><select id="exitOpenType"><option value="">Todos os tipos</option><option value="EMPRESTIMO">Empréstimo</option><option value="MANUTENCAO">Manutenção</option><option value="GARANTIA">Garantia</option><option value="OUTRA">Outra saída</option></select></div><div><label for="exitOpenFrom">Data inicial da saída</label><input id="exitOpenFrom" type="date"></div><div><label for="exitOpenTo">Data final da saída</label><input id="exitOpenTo" type="date"></div><div><label for="exitOpenPageSize">Registros por página</label><select id="exitOpenPageSize"><option>25</option><option>50</option><option>100</option></select></div></div>
+            <div class="exit-filter-actions"><button class="button button-secondary" id="exitOpenClear" type="button">Limpar filtros</button><span id="exitOpenCountLabel" class="small-note" aria-live="polite"></span></div>
+          </div><div id="exitOpenList"></div><div id="exitOpenPagination" class="exit-pagination"></div>
+        </section>
+        <section id="exitHistoryPanel" class="panel exit-list-panel" hidden>
+          <div class="modal-heading"><div><h3>Ocorrências registradas</h3><p class="small-note">Histórico de saídas abertas e encerradas.</p></div><button class="button button-secondary" type="button" data-close-exit-panel>Fechar</button></div>
+          <div class="exit-list-filters" data-exit-filter="history">
+            <div class="exit-filter-search"><label for="exitHistorySearch">Pesquisar ocorrência</label><input id="exitHistorySearch" type="search" placeholder="Tombamento, descrição, série, destino ou transportador"></div>
+            <div class="exit-filter-fields"><div><label for="exitHistoryType">Tipo de saída</label><select id="exitHistoryType"><option value="">Todos os tipos</option><option value="EMPRESTIMO">Empréstimo</option><option value="MANUTENCAO">Manutenção</option><option value="GARANTIA">Garantia</option><option value="OUTRA">Outra saída</option></select></div><div><label for="exitHistoryStatus">Situação</label><select id="exitHistoryStatus"><option value="">Todas</option><option value="open">Em aberto</option><option value="closed">Encerradas</option></select></div><div><label for="exitHistoryFrom">Data inicial da saída</label><input id="exitHistoryFrom" type="date"></div><div><label for="exitHistoryTo">Data final da saída</label><input id="exitHistoryTo" type="date"></div><div><label for="exitHistoryPageSize">Registros por página</label><select id="exitHistoryPageSize"><option>25</option><option>50</option><option>100</option></select></div></div>
+            <div class="exit-filter-actions"><button class="button button-secondary" id="exitHistoryClear" type="button">Limpar filtros</button><span id="exitHistoryCountLabel" class="small-note" aria-live="polite"></span></div>
+          </div><div id="exitHistoryList"></div><div id="exitHistoryPagination" class="exit-pagination"></div>
+        </section>
+        <div class="panel">
+          <h3>Registrar nova saída</h3>
+          <p class="small-note">Cada saída gera uma ocorrência independente no histórico do patrimônio.</p>
+          <form id="assetExitForm">
+            <div><label for="exitAssetSearch">Patrimônio *</label><input id="exitAssetSearch" type="search" autocomplete="off" placeholder="Pesquise pelo tombamento ou descrição"><div id="exitAssetResults" class="search-results" role="listbox"></div><select id="exitAsset" class="search-source-select" required><option value="">Selecione um bem</option></select></div>
+            <div id="exitAssetSummary" class="notice"><strong>Bem selecionado</strong><p>Os dados de origem e responsável serão carregados automaticamente.</p></div>
+            <div class="asset-form-grid">
+              <div><label for="exitType">Motivo da saída *</label><select id="exitType" required><option value="">Selecione</option><option value="EMPRESTIMO">Empréstimo</option><option value="MANUTENCAO">Manutenção / conserto</option><option value="GARANTIA">Garantia</option><option value="OUTRA">Outra saída</option></select></div>
+              <div><label for="exitDestinationSelect">Destino *</label><select id="exitDestinationSelect" required><option value="">Selecione unidade ou destino</option><option value="__OTHER__">Empresa / outro destino</option></select></div>
+              <div id="exitDestinationOtherWrap" hidden><label for="exitDestination">Nome da empresa / destino *</label><input id="exitDestination" maxlength="180" placeholder="Informe o destino"></div>
+              <div><label for="exitTransporterSelect">Quem está transportando? *</label><select id="exitTransporterSelect" required><option value="">Selecione um servidor</option><option value="__OTHER__">Pessoa não cadastrada</option></select></div>
+              <div id="exitTransporterOtherWrap" hidden><label for="exitTransporter">Nome do transportador *</label><input id="exitTransporter" maxlength="140" placeholder="Nome completo"></div>
+              <div><label for="exitDate">Data da saída</label><input id="exitDate" type="date" required></div>
+              <div><label for="exitExpectedReturn">Previsão de retorno (opcional)</label><input id="exitExpectedReturn" type="date"></div>
+              <div id="exitServiceDescriptionWrap" class="asset-form-full" hidden><label for="exitServiceDescription">Motivo / finalidade</label><input id="exitServiceDescription" maxlength="240" placeholder="Informe brevemente o motivo"></div>
+              <div class="asset-form-full"><label for="exitNotes">Observações (opcional)</label><textarea id="exitNotes" rows="2" maxlength="1000" placeholder="Somente se necessário"></textarea></div>
+            </div>
+            <div class="button-row"><button class="button button-primary" type="submit">Registrar saída</button></div>
+            <p id="assetExitMessage" class="message" role="status"></p>
+          </form>
+        </div>
+        <p class="small-note">Saídas em aberto bloqueiam transferência, alteração de responsável/localização e baixa até o registro do retorno. Consulte os bens fora da unidade e o histórico nos cards acima. Os termos podem ser reimpressos diretamente nas listas.</p>
+      <section id="assetReturnPanel" class="panel asset-detail-inline" hidden aria-labelledby="assetReturnTitle">
+        <div class="modal-heading"><div><p class="eyebrow">ENCERRAMENTO DE SAÍDA</p><h2 id="assetReturnTitle">Registrar retorno do bem</h2></div><button id="cancelAssetReturnBtn" class="button button-secondary" type="button">Cancelar</button></div>
+        <div id="assetReturnExitSummary" class="notice"></div>
+        <h3 class="return-ficha-heading">Ficha do patrimônio</h3><div id="assetReturnAssetFicha" class="detail-grid return-asset-ficha"></div>
+        <h3 class="return-ficha-heading">Dados da saída</h3><div id="assetReturnExitFicha" class="detail-grid return-exit-ficha"></div>
+        <h3 class="return-ficha-heading">Registro de retorno</h3>
+        <form id="assetReturnForm"><input id="returnExitId" type="hidden"><div class="asset-form-grid">
+          <div><label for="returnDate">Data do retorno *</label><input id="returnDate" type="date" required></div>
+          <div><label for="returnCondition">Condição do bem no retorno *</label><select id="returnCondition" required><option value="">Selecione</option><option>Retornou em perfeito estado</option><option>Retornou com defeito</option><option>Retornou parcialmente recuperado</option><option>Retornou sem condições de uso</option></select></div>
+          <div class="asset-form-full"><label class="checkline"><input id="returnHasExpenses" type="checkbox"> Houve despesas com este atendimento?</label></div>
+          <div id="returnExpenseFields" class="asset-form-full" hidden><div class="asset-form-grid"><div><label for="returnRepairCost">Valor do conserto (R$)</label><input id="returnRepairCost" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off"></div>
+          <div><label for="returnServiceCost">Valor do serviço (R$)</label><input id="returnServiceCost" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off"></div>
+          <div><label for="returnTransportCost">Valor do translado (R$)</label><input id="returnTransportCost" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off"></div>
+          <div><label for="returnInvoice">Número da Nota Fiscal de Serviço</label><input id="returnInvoice" maxlength="100" placeholder="Número da NFS-e"></div>
+          <div><label for="returnInspectorSelect">Conferido por</label><select id="returnInspectorSelect"><option value="">Selecionar servidor (opcional)</option><option value="__OTHER__">Outro servidor</option></select></div>
+          <div id="returnInspectorOtherWrap" hidden><label for="returnInspector">Nome do responsável</label><input id="returnInspector" maxlength="140" placeholder="Nome completo"></div>
+          </div></div>
+          <div class="asset-form-full"><label for="returnServiceNotes">Observações sobre o serviço realizado</label><textarea id="returnServiceNotes" rows="2" maxlength="2000"></textarea></div>
+          <div class="asset-form-full"><label for="returnNotes">Observações sobre o retorno</label><textarea id="returnNotes" rows="2" maxlength="2000"></textarea></div>
+        </div><div class="button-row"><button class="button button-primary" type="submit">Confirmar retorno</button></div><p id="assetReturnMessage" class="message" role="status"></p></form>
+      </section>
+
+      </section>
+
 
       <section id="assetDetailModal" class="panel asset-detail-inline" hidden aria-labelledby="assetDetailTitle">
         <div class="modal-card-inline">

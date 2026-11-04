@@ -1,4 +1,4 @@
-import { getAssetCounts, getCollectionRows, ensureDemoSeed, deleteTestMasterData, recordAssetTransfer, recordAssetDisposal, saveReferenceRecord, saveAssetRecord, changeSectorLocation } from "./db.js";
+import { getAssetCounts, getCollectionRows, ensureDemoSeed, deleteTestMasterData, recordAssetTransfer, recordAssetDisposal, recordAssetExit, recordAssetReturn, saveReferenceRecord, saveAssetRecord, changeSectorLocation } from "./db.js";
 import { prepareWorkbook, commitPreparedWorkbook } from "./importacao.js";
 
 const $ = id => document.getElementById(id);
@@ -805,7 +805,7 @@ async function renderDisposalHistory() {
   if (!list) return;
   const [records, assets, sectors, people] = await Promise.all([
     getCollectionRows("baixas"), getCollectionRows("bens"),
-    getCollectionRows("setores"), getCollectionRows("responsaveis")
+    getCollectionRows("setores"), getCollectionRows("responsaveis"), getCollectionRows("saidas")
   ]);
   const query = ($("disposalHistorySearch")?.value || "").trim().toLocaleLowerCase("pt-BR");
   const sorted = [...records].sort((a,b) => new Date(b.criadoEm || b.dataHora || b.timestamp || 0) - new Date(a.criadoEm || a.dataHora || a.timestamp || 0));
@@ -1020,6 +1020,220 @@ $("confirmDisposalBtn")?.addEventListener("click", async () => {
 });
 
 
+// Controle de saídas temporárias, custos e retornos.
+let exitAssets = []; let exitSectors = []; let exitPeople = [];
+const moneyToNumber = value => { const digits=String(value||"").replace(/\D/g,""); return digits ? Number(digits)/100 : 0; };
+const moneyMask = value => { const digits=String(value||"").replace(/\D/g,""); const cents=digits ? Number(digits) : 0; return (cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); };
+["returnRepairCost","returnServiceCost","returnTransportCost"].forEach(id=>$(id)?.addEventListener("input",e=>{e.target.value=moneyMask(e.target.value);}));
+const moneyBR = value => Number(value||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+async function loadAssetExitView(){
+  const [allAssets, sectors, people, units]=await Promise.all([getCollectionRows("bens"),getCollectionRows("setores"),getCollectionRows("responsaveis"),getCollectionRows("unidades")]);
+  exitAssets=allAssets.filter(a=>String(a.Situacao||"").toLowerCase()!=="baixado"); exitSectors=sectors; exitPeople=people;
+  const unitSelect=$("exitDestinationSelect"); unitSelect.replaceChildren(new Option("Selecione unidade ou destino",""),new Option("Empresa / outro destino","__OTHER__"));
+  units.forEach(u=>unitSelect.add(new Option(u.Nome_Unidade||u.Nome||u.Descricao||String(u.ID_Unidade),u.Nome_Unidade||u.Nome||u.Descricao||String(u.ID_Unidade))));
+  const transporterSelect=$("exitTransporterSelect"); transporterSelect.replaceChildren(new Option("Selecione um servidor",""),new Option("Pessoa não cadastrada","__OTHER__"));
+  people.filter(p=>p.Ativo!==false && String(p.Situacao||"").toLowerCase()!=="inativo").forEach(p=>transporterSelect.add(new Option(p.Nome_Completo||p.Nome||String(p.ID_Responsavel),p.Nome_Completo||p.Nome||String(p.ID_Responsavel))));
+  const inspectorSelect=$("returnInspectorSelect"); if(inspectorSelect){inspectorSelect.replaceChildren(new Option("Selecionar servidor (opcional)",""),new Option("Outro servidor","__OTHER__"));people.forEach(p=>inspectorSelect.add(new Option(p.Nome_Completo||p.Nome||String(p.ID_Responsavel),p.Nome_Completo||p.Nome||String(p.ID_Responsavel))));}
+  const open=(await getCollectionRows("saidas")).filter(x=>!x.dataRetorno);
+  const select=$("exitAsset"); select.replaceChildren(new Option("Selecione um bem",""));
+  exitAssets.filter(a=>!open.some(x=>String(x.Tombamento)===String(a.Tombamento))).forEach(a=>select.add(new Option(`${a.Tombamento} — ${a.Descricao_Bem}`,String(a.Tombamento))));
+  $("exitDate").value ||= new Date().toISOString().slice(0,10);
+  $("exitDestinationOtherWrap").hidden=true; $("exitTransporterOtherWrap").hidden=true; $("exitServiceDescriptionWrap").hidden=true;
+  $("exitAssetSearch").value=""; $("exitAssetResults").replaceChildren(); updateExitAssetSummary(); await renderAssetExitRecords();
+}
+function updateExitAssetSummary(){ const a=exitAssets.find(x=>String(x.Tombamento)===$("exitAsset").value); const box=$("exitAssetSummary"); box.replaceChildren(); const strong=document.createElement("strong");strong.textContent="Bem selecionado";const p=document.createElement("p");const sector=exitSectors.find(x=>String(x.ID_Setor)===String(a?.ID_Setor));const person=exitPeople.find(x=>String(x.ID_Responsavel)===String(a?.ID_Responsavel));p.textContent=a?`${a.Tombamento} — ${a.Descricao_Bem} · Série: ${a.Numero_Serie||"Não informada"} · Setor: ${sector?.Nome_Setor||"Não informado"} · Responsável: ${person?.Nome_Completo||"Não informado"}`:"Selecione um bem para consultar sua origem e responsável.";box.append(strong,p); }
+$("exitAssetSearch")?.addEventListener("input",e=>showSearchResults("exitAssetResults",exitAssets.map(a=>({value:String(a.Tombamento),asset:a})),e.target.value,r=>`${r.asset.Tombamento} — ${r.asset.Descricao_Bem}`,r=>[r.asset.Tombamento,r.asset.Numero_Serie,r.asset.Descricao_Bem,r.asset.Marca,r.asset.Modelo].filter(Boolean).join(" "),r=>{$("exitAsset").value=r.value;$("exitAssetSearch").value=`${r.asset.Tombamento} — ${r.asset.Descricao_Bem}`;updateExitAssetSummary();},$("exitAsset").value));
+$("exitAsset")?.addEventListener("change",updateExitAssetSummary);
+
+$("exitDestinationSelect")?.addEventListener("change",e=>{$("exitDestinationOtherWrap").hidden=e.target.value!=="__OTHER__";$("exitDestination").required=e.target.value==="__OTHER__";});
+$("exitTransporterSelect")?.addEventListener("change",e=>{$("exitTransporterOtherWrap").hidden=e.target.value!=="__OTHER__";$("exitTransporter").required=e.target.value==="__OTHER__";});
+$("exitType")?.addEventListener("change",e=>{$("exitServiceDescriptionWrap").hidden=!["MANUTENCAO","GARANTIA","OUTRA"].includes(e.target.value);});
+$("returnHasExpenses")?.addEventListener("change",e=>{$("returnExpenseFields").hidden=!e.target.checked;});
+$("returnInspectorSelect")?.addEventListener("change",e=>{$("returnInspectorOtherWrap").hidden=e.target.value!=="__OTHER__";});
+$("assetExitForm")?.addEventListener("submit",async e=>{e.preventDefault();try{const a=exitAssets.find(x=>String(x.Tombamento)===$("exitAsset").value);if(!a)throw new Error("Selecione um bem válido.");const destinationChoice=$("exitDestinationSelect").value;const transporterChoice=$("exitTransporterSelect").value;
+const data={Tombamento:String(a.Tombamento),tipo:$("exitType").value,destino:destinationChoice==="__OTHER__"?$("exitDestination").value.trim():destinationChoice,
+responsavelTransportador:transporterChoice==="__OTHER__"?$("exitTransporter").value.trim():transporterChoice,
+responsavelRecebedor:"",unidadeEmpresaDestino:destinationChoice==="__OTHER__"?$("exitDestination").value.trim():destinationChoice,
+dataSaida:$("exitDate").value,previsaoRetorno:$("exitExpectedReturn").value||"",finalidade:$("exitServiceDescription").value.trim(),observacoes:$("exitNotes").value.trim()};if(!data.tipo||!data.destino||!data.dataSaida||!data.responsavelTransportador)throw new Error("Selecione o motivo, destino, transportador e data da saída.");const saved=await recordAssetExit(data);openExitTerm({...saved,...data,_id:saved._id,asset:a}).catch(err=>setMessage("assetExitMessage",`Saída registrada, mas não foi possível abrir o termo: ${err.message}`,"error"));$("assetExitForm").reset();$("exitDate").value=new Date().toISOString().slice(0,10);$("exitDestinationOtherWrap").hidden=true;$("exitTransporterOtherWrap").hidden=true;$("exitServiceDescriptionWrap").hidden=true;$("exitDestination").required=false;$("exitTransporter").required=false;setMessage("assetExitMessage","Saída registrada. O bem ficará bloqueado para movimentações até o retorno.","success");await loadAssetExitView();}catch(err){setMessage("assetExitMessage",err.message,"error");}});
+async function openExitTerm(record){
+ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ const date=v=>v?new Date(`${v}T00:00:00`).toLocaleDateString("pt-BR"):"Não informada";
+ const [assets,categories,sectors,places,floors,units,people]=await Promise.all([getCollectionRows("bens"),getCollectionRows("categorias"),getCollectionRows("setores"),getCollectionRows("locais"),getCollectionRows("andares"),getCollectionRows("unidades"),getCollectionRows("responsaveis")]);
+ const a=record.assetSnapshot||assets.find(x=>String(x.Tombamento)===String(record.Tombamento))||record.asset||{};
+ const category=categories.find(x=>String(x.ID_Categoria)===String(a.ID_Categoria));
+ const sector=sectors.find(x=>String(x.ID_Setor)===String(a.ID_Setor));
+ const localId=String(sector?.ID_Local_Atual??sector?.ID_Local_Referencia??a.ID_Local??"");
+ const place=places.find(x=>String(x.ID_Local)===localId);
+ const floor=floors.find(x=>String(x.ID_Andar)===String(place?.ID_Andar??""));
+ const unitId=String(place?.ID_Unidade??floor?.ID_Unidade??a.ID_Unidade??"");
+ const unit=units.find(x=>String(x.ID_Unidade)===unitId);
+ const person=people.find(x=>String(x.ID_Responsavel)===String(a.ID_Responsavel));
+ const resolved=v=>v&&String(v).trim()?v:"Não informado";
+ const documentNumber=record.documentoNumero||`SAI-${String(record.dataSaida||"").replace(/\D/g,"")}-${String(record._id||"").replace(/[^a-zA-Z0-9]/g,"").slice(-5).toUpperCase()}`;
+ const snap=record.assetSnapshot||{};
+ const fields=[ ["Tombamento",a.Tombamento||record.Tombamento], ["Descrição",a.Descricao_Bem||record.Descricao_Bem], ["Número de série",a.Numero_Serie||snap.Numero_Serie], ["Categoria",snap.categoriaNome||category?.Nome_Categoria||category?.Descricao_Categoria], ["Unidade de origem",snap.unidadeNome||unit?.Nome_Unidade||unit?.Nome||unit?.Descricao], ["Setor de origem",snap.setorNome||sector?.Nome_Setor||sector?.Nome], ["Responsável patrimonial",snap.responsavelNome||person?.Nome_Completo||person?.Nome] ];
+ const w=window.open("","_blank","width=900,height=750"); if(!w){setMessage("assetExitMessage","Permita pop-ups para visualizar e imprimir o termo.","error");return;}
+ const fieldHtml=items=>items.map(([l,v])=>`<div class="field"><div class="label">${esc(l)}</div><div class="value">${esc(resolved(v))}</div></div>`).join("");
+ w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Termo de Saída de Bem</title><style>*{box-sizing:border-box}body{font:14px Arial,sans-serif;color:#172033;margin:32px;max-width:900px}h1{text-align:center;font-size:20px}h2{font-size:15px;border-bottom:1px solid #8995a7;padding-bottom:6px;margin-top:24px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{padding:9px;border:1px solid #ccd3df;border-radius:5px;min-height:52px}.label{font-size:10px;color:#58657a;text-transform:uppercase}.value{font-weight:600;margin-top:5px;overflow-wrap:anywhere}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:65px}.sign{text-align:center;border-top:1px solid #222;padding-top:8px;min-height:35px}.blank{height:32px;border-bottom:1px solid #333;margin-bottom:8px}.foot{margin-top:30px;font-size:11px;color:#555}.toolbar{display:flex;justify-content:flex-end;margin:20px 0}@media print{.toolbar{display:none}body{margin:18mm}}@media(max-width:600px){.meta{grid-template-columns:1fr}body{margin:16px}}</style></head><body><h1>TERMO DE SAÍDA DE BEM PATRIMONIAL</h1><p><b>Documento:</b> ${esc(documentNumber)} &nbsp; <b>Data da saída:</b> ${date(record.dataSaida)}</p><h2>Identificação do patrimônio</h2><div class="meta">${fieldHtml(fields)}</div><h2>Dados da saída</h2><div class="meta">${fieldHtml([["Tipo de saída",record.tipo], ["Destino",record.destino], ["Finalidade",record.finalidade], ["Previsão de retorno",date(record.previsaoRetorno)], ["Transportador",record.responsavelTransportador], ["Recebedor informado",record.responsavelRecebedor], ["Observações",record.observacoes]])}</div><div class="signatures"><div><div class="blank"></div><div class="sign">${esc(resolved(record.responsavelTransportador))}<br>Responsável pelo transporte</div></div><div><div class="blank"></div><div class="sign">Nome e assinatura de quem recebe no destino<br>Data: ____/____/________</div></div></div><p class="foot">Documento emitido pelo sistema de Gestão Patrimonial. A assinatura do recebedor deve ser coletada no destino, mesmo quando seu nome não estiver previamente informado.</p><div class="toolbar"><button onclick="window.print()">Imprimir / Salvar em PDF</button></div></body></html>`);w.document.close();
+}
+
+const exitListState={open:{page:1,pageSize:25},history:{page:1,pageSize:25}};
+const exitTypeLabel=value=>({EMPRESTIMO:"Empréstimo",MANUTENCAO:"Manutenção",GARANTIA:"Garantia",OUTRA:"Outra saída"}[String(value||"").toUpperCase()]||String(value||"Não informado"));
+const exitDateValue=value=>String(value||"").slice(0,10);
+function getExitFilterConfig(kind){
+  const prefix=kind==="open"?"exitOpen":"exitHistory";
+  return {prefix,search:$(prefix+"Search")?.value.trim().toLocaleLowerCase("pt-BR")||"",type:$(prefix+"Type")?.value||"",status:kind==="history"?$(prefix+"Status")?.value||"":"open",from:$(prefix+"From")?.value||"",to:$(prefix+"To")?.value||"",pageSize:Number($(prefix+"PageSize")?.value||25)};
+}
+function filterExitRecords(records,kind){
+  const f=getExitFilterConfig(kind);
+  return records.filter(record=>{
+    const asset=exitAssets.find(a=>String(a.Tombamento)===String(record.Tombamento))||record.assetSnapshot||{};
+    const haystack=[record.Tombamento,record.Descricao_Bem,asset.Descricao_Bem,asset.Numero_Serie,record.numeroSerie,record.destino,record.unidadeEmpresaDestino,record.responsavelTransportador,record.tipo,record.finalidade,record.documentoNumero].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    const date=exitDateValue(record.dataSaida);
+    if(f.search&&!haystack.includes(f.search))return false;
+    if(f.type&&String(record.tipo)!==f.type)return false;
+    if(f.status==="open"&&record.dataRetorno)return false;
+    if(f.status==="closed"&&!record.dataRetorno)return false;
+    if(f.from&&date<f.from)return false;
+    if(f.to&&date>f.to)return false;
+    return true;
+  });
+}
+function renderExitPagination(kind,total){
+  const prefix=kind==="open"?"exitOpen":"exitHistory",state=exitListState[kind],pages=Math.max(1,Math.ceil(total/state.pageSize));
+  state.page=Math.min(Math.max(1,state.page),pages);
+  const host=$(prefix+"Pagination");if(!host)return;host.replaceChildren();
+  const info=document.createElement("span");info.className="small-note";info.textContent=total?`Exibindo ${(state.page-1)*state.pageSize+1}–${Math.min(state.page*state.pageSize,total)} de ${total} registro(s) · Página ${state.page} de ${pages}`:"Nenhum registro encontrado";
+  const controls=document.createElement("div");controls.className="exit-page-controls";
+  const prev=document.createElement("button");prev.type="button";prev.className="button button-secondary";prev.textContent="Anterior";prev.disabled=state.page<=1;prev.addEventListener("click",()=>{state.page--;renderAssetExitRecords();});
+  const next=document.createElement("button");next.type="button";next.className="button button-secondary";next.textContent="Próxima";next.disabled=state.page>=pages;next.addEventListener("click",()=>{state.page++;renderAssetExitRecords();});
+  controls.append(prev,next);host.append(info,controls);
+  const label=$(prefix+"CountLabel");if(label)label.textContent=`${total} resultado(s)`;
+}
+async function renderAssetExitRecords(){
+  const records=await getCollectionRows("saidas");
+  const open=records.filter(x=>!x.dataRetorno);
+  const cost=records.reduce((sum,x)=>sum+Number(x.valorConserto||0)+Number(x.valorServico||0)+Number(x.valorTranslado||0),0);
+  if($("exitOpenCount"))$("exitOpenCount").textContent=open.length;
+  if($("exitTotalCount"))$("exitTotalCount").textContent=records.length;
+  if($("exitTotalCost"))$("exitTotalCost").textContent=moneyBR(cost);
+  [ ["open",open,false],["history",records,true] ].forEach(([kind,source,showHistory])=>{
+    const filtered=filterExitRecords(source,kind),state=exitListState[kind],config=getExitFilterConfig(kind);
+    state.pageSize=config.pageSize;
+    const sorted=[...filtered].sort((a,b)=>String(b.dataSaida||"").localeCompare(String(a.dataSaida||"")));
+    const pages=Math.max(1,Math.ceil(sorted.length/state.pageSize));state.page=Math.min(state.page,pages);
+    const pageRows=sorted.slice((state.page-1)*state.pageSize,state.page*state.pageSize);
+    renderExitRecordsList(kind==="open"?"exitOpenList":"exitHistoryList",pageRows,showHistory);
+    renderExitPagination(kind,sorted.length);
+  });
+}
+function printExitHistory(record,asset){
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const val=v=>v!==undefined&&v!==null&&String(v).trim()?String(v):"Não informado";
+  const date=v=>v?new Date(`${String(v).slice(0,10)}T00:00:00`).toLocaleDateString("pt-BR"):"Não informado";
+  const total=Number(record.valorConserto||0)+Number(record.valorServico||0)+Number(record.valorTranslado||0);
+  const currency=v=>moneyBR(Number(v||0));
+  const documentNumber=record.documentoNumero||`SAI-${String(record.dataSaida||"").replace(/\D/g,"")}-${String(record._id||"").replace(/[^a-zA-Z0-9]/g,"").slice(-5).toUpperCase()}`;
+  const w=window.open("","_blank","width=1000,height=800");
+  if(!w){setMessage("assetExitMessage","Permita pop-ups para imprimir o histórico da saída.","error");return;}
+  const rows=items=>items.map(([label,value])=>`<tr><th>${esc(label)}</th><td>${esc(val(value))}</td></tr>`).join("");
+  const open=!record.dataRetorno;
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Histórico da saída ${esc(documentNumber)}</title><style>*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#17243a;margin:28px auto;max-width:960px;padding:0 20px}h1{text-align:center;font-size:21px;margin:8px 0}h2{font-size:15px;margin:24px 0 8px;padding-bottom:6px;border-bottom:1px solid #64748b;color:#153c73}.meta{display:flex;justify-content:space-between;gap:12px;margin:14px 0 22px}.status{padding:6px 10px;border-radius:20px;background:${open?'#fff1d6':'#e6f7ed'};color:${open?'#8a5200':'#087443'};font-weight:bold}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d7e0eb;padding:8px;text-align:left;vertical-align:top}th{width:31%;background:#f3f6fa;color:#526176;font-size:11px;text-transform:uppercase}td{overflow-wrap:anywhere}.total{font-size:17px;font-weight:bold;text-align:right;margin-top:12px;padding:12px;background:#edf4ff;border-radius:6px}.note{padding:10px;background:#fff8e8;border:1px solid #f0d9a8;border-radius:6px}.toolbar{text-align:right;margin:20px 0}.muted{color:#65748b}@media print{body{margin:12mm auto;padding:0}.toolbar{display:none}h2{break-after:avoid}table{break-inside:avoid}}@media(max-width:600px){.meta{flex-direction:column}}</style></head><body><h1>HISTÓRICO COMPLETO DA SAÍDA DE BEM</h1><div class="meta"><div><b>Documento:</b> ${esc(documentNumber)}<br><b>Data de emissão:</b> ${date(new Date().toISOString().slice(0,10))}</div><span class="status">${open?'Em aberto — aguardando retorno':'Saída encerrada'}</span></div><h2>1. Identificação do patrimônio</h2><table>${rows([["Tombamento",asset?.Tombamento||record.Tombamento],["Descrição",asset?.Descricao_Bem||record.Descricao_Bem],["Categoria",record.assetSnapshot?.categoriaNome||asset?.Categoria_Nome||asset?.Nome_Categoria],["Marca",asset?.Marca],["Modelo",asset?.Modelo],["Número de série",asset?.Numero_Serie||record.Numero_Serie],["Unidade de origem",record.assetSnapshot?.unidadeNome],["Andar",record.assetSnapshot?.andarNome],["Sala / local físico",record.assetSnapshot?.localNome],["Setor de origem",record.assetSnapshot?.setorNome],["Responsável patrimonial",record.assetSnapshot?.responsavelNome]])}</table><h2>2. Dados da saída</h2><table>${rows([["Tipo de saída",exitTypeLabel(record.tipo)],["Destino",record.destino||record.unidadeEmpresaDestino],["Finalidade",record.finalidade],["Transportador",record.responsavelTransportador],["Recebedor",record.responsavelRecebedor],["Data da saída",date(record.dataSaida)],["Previsão de retorno",date(record.previsaoRetorno)],["Observações da saída",record.observacoes]])}</table><h2>3. Dados do retorno</h2>${open?'<p class="note">Esta ocorrência permanece em aberto. O retorno ainda não foi registrado.</p>':`<table>${rows([["Data do retorno",date(record.dataRetorno)],["Condição do patrimônio",record.condicaoRetorno],["Responsável pela inspeção",record.responsavelConferenciaRetorno],["Observações do serviço",record.observacoesServicoRetorno],["Observações do retorno",record.observacoesRetorno]])}</table>`}<h2>4. Despesas e documentos fiscais</h2><table>${rows([["Conserto / reparo",open?"Aguardando retorno":currency(record.valorConserto)],["Serviço",open?"Aguardando retorno":currency(record.valorServico)],["Transporte / translado",open?"Aguardando retorno":currency(record.valorTranslado)],["Nota fiscal de serviço",record.notaFiscalServico]])}</table><div class="total">${open?'Despesas: aguardando registro do retorno':`Total gasto: ${currency(total)}`}</div><h2>5. Situação da ocorrência</h2><table>${rows([["Situação",open?"Em aberto — aguardando retorno":"Encerrada — retorno registrado"],["Data da saída",date(record.dataSaida)],["Data do retorno",open?"Ainda não retornou":date(record.dataRetorno)]])}</table><p class="muted">Relatório emitido pelo sistema de Gestão Patrimonial. As informações refletem os dados registrados nesta ocorrência.</p><div class="toolbar"><button onclick="window.print()">Imprimir / Salvar em PDF</button></div></body></html>`);
+  w.document.close();
+}
+function renderExitRecordsList(hostId,records,showHistory){
+  const host=$(hostId);if(!host)return;host.replaceChildren();
+  if(!records.length){const p=document.createElement("p");p.className="small-note";p.textContent="Nenhum registro corresponde aos filtros informados.";host.append(p);return;}
+  const list=document.createElement("div");list.className="exit-card-list";
+  records.forEach(record=>{
+    const asset=exitAssets.find(a=>String(a.Tombamento)===String(record.Tombamento))||record.assetSnapshot||{};
+    const open=!record.dataRetorno;
+    const card=document.createElement("article");card.className="exit-asset-card"+(open?" is-open":" is-closed");
+    const main=document.createElement("button");main.type="button";main.className="exit-card-main";main.setAttribute("aria-label",`${open?"Abrir atendimento":"Consultar ocorrência"} do bem ${record.Tombamento}`);
+    const top=document.createElement("div");top.className="exit-card-top";
+    const identity=document.createElement("div");identity.className="exit-card-identity";
+    const tomb=document.createElement("strong");tomb.className="exit-card-tombamento";tomb.textContent=record.Tombamento||asset.Tombamento||"—";
+    const desc=document.createElement("span");desc.className="exit-card-description";desc.textContent=asset.Descricao_Bem||record.Descricao_Bem||"Bem patrimonial";identity.append(tomb,desc);
+    const status=document.createElement("span");status.className="exit-status-badge "+(open?"is-open":"is-closed");status.textContent=open?"Aguardando retorno":"Retorno registrado";top.append(identity,status);
+    const info=document.createElement("div");info.className="exit-card-info";
+    [["Tipo",exitTypeLabel(record.tipo)],["Destino",record.destino||"Não informado"],["Transportador",record.responsavelTransportador||"Não informado"],["Data da saída",record.dataSaida||"Não informada"],[showHistory?"Data do retorno":"Previsão de retorno",showHistory?(record.dataRetorno||"Ainda não retornou"):(record.previsaoRetorno||"Não informada")]].forEach(([label,value])=>{const item=document.createElement("div");item.className="exit-card-field";const l=document.createElement("span");l.textContent=label;const v=document.createElement("strong");v.textContent=value;item.append(l,v);info.append(item);});main.append(top,info);
+    main.addEventListener("click",()=>{if(open)openAssetReturnForm(record,asset);else{const detail=card.querySelector(".exit-card-details");detail.hidden=!detail.hidden;}});
+    const actions=document.createElement("div");actions.className="exit-card-actions";
+    const term=document.createElement("button");term.type="button";term.className="button button-secondary exit-action-button exit-term-button";term.textContent="Imprimir termo";term.addEventListener("click",()=>openExitTerm({...record,asset}).catch(err=>setMessage("assetExitMessage",`Não foi possível gerar o termo: ${err.message}`,"error")));actions.append(term);
+    const historyPrint=document.createElement("button");historyPrint.type="button";historyPrint.className="button button-secondary exit-action-button";historyPrint.textContent="Imprimir histórico da saída";historyPrint.addEventListener("click",()=>printExitHistory(record,asset));actions.append(historyPrint);
+    if(open){const ret=document.createElement("button");ret.type="button";ret.className="button button-primary exit-action-button";ret.textContent="Registrar retorno";ret.addEventListener("click",()=>openAssetReturnForm(record,asset));actions.append(ret);}
+    const detail=document.createElement("div");detail.className="exit-card-details";detail.hidden=true;
+    [["Finalidade",record.finalidade],["Observações da saída",record.observacoes],["Condição no retorno",record.condicaoRetorno],["Despesas",record.dataRetorno?moneyBR(Number(record.valorConserto||0)+Number(record.valorServico||0)+Number(record.valorTranslado||0)):"Ainda não registradas"],["Nota fiscal",record.notaFiscalServico],["Observações do serviço",record.observacoesServicoRetorno],["Observações do retorno",record.observacoesRetorno]].forEach(([label,value])=>{if(value){const f=document.createElement("div"),l=document.createElement("span"),v=document.createElement("strong");l.textContent=label;v.textContent=String(value);f.append(l,v);detail.append(f);}});
+    card.append(main,actions,detail);list.append(card);
+  });host.append(list);
+}
+["exitOpenSearch","exitOpenType","exitOpenFrom","exitOpenTo","exitOpenPageSize","exitHistorySearch","exitHistoryType","exitHistoryStatus","exitHistoryFrom","exitHistoryTo","exitHistoryPageSize"].forEach(id=>{const handler=()=>{const kind=id.startsWith("exitOpen")?"open":"history";exitListState[kind].page=1;renderAssetExitRecords();};$(id)?.addEventListener("input",handler);$(id)?.addEventListener("change",handler);});
+["exitOpenClear","exitHistoryClear"].forEach(id=>$(id)?.addEventListener("click",()=>{const kind=id==="exitOpenClear"?"open":"history",prefix=kind==="open"?"exitOpen":"exitHistory";["Search","Type","Status","From","To"].forEach(suffix=>{const el=$(prefix+suffix);if(el)el.value="";});exitListState[kind].page=1;renderAssetExitRecords();}));
+
+$("showExitOpenBtn")?.addEventListener("click",()=>toggleExitListPanel("exitOpenListPanel"));
+$("showExitHistoryBtn")?.addEventListener("click",()=>toggleExitListPanel("exitHistoryPanel"));
+document.querySelectorAll("[data-close-exit-panel]").forEach(button=>button.addEventListener("click",()=>{const panel=button.closest(".exit-list-panel");if(panel)panel.hidden=true;document.querySelectorAll(".metric-action").forEach(b=>b.setAttribute("aria-expanded","false"));}));
+function toggleExitListPanel(panelId){
+  const panel=$(panelId), wasOpen=!panel.hidden;
+  $("exitOpenListPanel").hidden=true;$("exitHistoryPanel").hidden=true;
+  document.querySelectorAll(".metric-action").forEach(b=>b.setAttribute("aria-expanded","false"));
+  if(!wasOpen){panel.hidden=false;const button=panelId==="exitOpenListPanel"?$("showExitOpenBtn"):$("showExitHistoryBtn");button?.setAttribute("aria-expanded","true");renderAssetExitRecords().catch(e=>console.error("Falha ao atualizar saídas:",e));panel.scrollIntoView({behavior:"smooth",block:"start"});}
+}
+
+
+
+async function openAssetReturnForm(record, asset){
+  const panel=$("assetReturnPanel"), summary=$("assetReturnExitSummary");
+  $("exitOpenListPanel").hidden=true; $("exitHistoryPanel").hidden=true;
+  $("returnExitId").value=record._id; $("returnDate").value=new Date().toISOString().slice(0,10); $("returnCondition").value="";
+  ["returnRepairCost","returnServiceCost","returnTransportCost","returnInvoice","returnInspector","returnServiceNotes","returnNotes"].forEach(id=>$(id).value="");
+  $("returnHasExpenses").checked=false;$("returnExpenseFields").hidden=true;$("returnInspectorSelect").value="";$("returnInspectorOtherWrap").hidden=true;
+  const [assets,categories,sectors,places,floors,units,people]=await Promise.all([getCollectionRows("bens"),getCollectionRows("categorias"),getCollectionRows("setores"),getCollectionRows("locais"),getCollectionRows("andares"),getCollectionRows("unidades"),getCollectionRows("responsaveis")]);
+  const a=assets.find(x=>String(x.Tombamento)===String(record.Tombamento))||asset||{};
+  const category=categories.find(x=>String(x.ID_Categoria)===String(a.ID_Categoria));
+  const sector=sectors.find(x=>String(x.ID_Setor)===String(a.ID_Setor));
+  const localId=String(sector?.ID_Local_Atual??sector?.ID_Local_Referencia??a.ID_Local??"");
+  const place=places.find(x=>String(x.ID_Local)===localId);
+  const floor=floors.find(x=>String(x.ID_Andar)===String(place?.ID_Andar??""));
+  const unitId=String(place?.ID_Unidade??floor?.ID_Unidade??"");
+  const unit=units.find(x=>String(x.ID_Unidade)===unitId);
+  const person=people.find(x=>String(x.ID_Responsavel)===String(a.ID_Responsavel));
+  const assetFields=[["Tombamento",a.Tombamento], ["Descrição",a.Descricao_Bem], ["Categoria",category?.Nome_Categoria], ["Situação",a.Situacao], ["Marca",a.Marca], ["Modelo",a.Modelo], ["Número de série",a.Numero_Serie], ["Unidade / edifício",unit?.Nome_Unidade], ["Andar",floor?.Nome_Andar], ["Sala / local físico",place?.Nome_Local_Fisico], ["Setor",sector?.Nome_Setor], ["Responsável",person?.Nome_Completo], ["Data de aquisição",a.Data_Aquisicao], ["Valor de aquisição",formatCurrency(a.Valor_Aquisicao)], ["Observações",a.Observacoes]];
+  const ficha=$("assetReturnAssetFicha"); ficha.replaceChildren(); assetFields.forEach(([label,value])=>ficha.append(detailField(label,value)));
+  const exitFields=[["Tipo de saída",record.tipo], ["Destino",record.destino], ["Transportador",record.responsavelTransportador], ["Data da saída",record.dataSaida], ["Previsão de retorno",record.previsaoRetorno||"Não informada"], ["Finalidade",record.finalidade], ["Observações da saída",record.observacoes]];
+  const exitFicha=$("assetReturnExitFicha"); exitFicha.replaceChildren(); exitFields.forEach(([label,value])=>exitFicha.append(detailField(label,value)));
+  summary.textContent="Consulte os dados do patrimônio e da saída abaixo. Os campos de identificação são somente para consulta; preencha apenas os dados do retorno.";
+  // Modo dedicado: a ficha ocupa a tela inteira da área de Saída de Bens.
+  // A pesquisa/listagem fica preservada, mas sai da visualização enquanto o retorno é preenchido.
+  const view=$("assetExitView");
+  view?.classList.add("return-workspace-active");
+  panel.hidden=false;
+  panel.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeAssetReturnWorkspace({showOpenList=true}={}){
+  const view=$("assetExitView");
+  view?.classList.remove("return-workspace-active");
+  $("assetReturnPanel").hidden=true;
+  $("assetReturnForm").reset();
+  $("returnExpenseFields").hidden=true;
+  if(showOpenList){$("exitOpenListPanel").hidden=false;$("exitOpenListPanel").scrollIntoView({behavior:"smooth",block:"start"});}
+}
+$("cancelAssetReturnBtn")?.addEventListener("click",()=>closeAssetReturnWorkspace());
+$("assetReturnForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  try{
+    const data={exitId:$("returnExitId").value,dataRetorno:$("returnDate").value,condicaoRetorno:$("returnCondition").value,
+      valorConserto:moneyToNumber($("returnRepairCost").value),valorServico:moneyToNumber($("returnServiceCost").value),valorTranslado:moneyToNumber($("returnTransportCost").value),
+      notaFiscalServico:$("returnInvoice").value.trim(),responsavelConferenciaRetorno:$("returnInspectorSelect").value==="__OTHER__"?$("returnInspector").value.trim():$("returnInspectorSelect").value,
+      observacoesServicoRetorno:$("returnServiceNotes").value.trim(),observacoesRetorno:$("returnNotes").value.trim()};
+    if(!data.dataRetorno||!data.condicaoRetorno)throw new Error("Informe a data e a condição do bem no retorno.");
+    await recordAssetReturn(data);
+    closeAssetReturnWorkspace({showOpenList:false});
+    $("exitOpenListPanel").hidden=false;
+    setMessage("assetExitMessage","Retorno registrado. As movimentações do bem foram liberadas.","success");
+    await loadAssetExitView(); await searchAssets();
+  }catch(err){setMessage("assetReturnMessage",err.message,"error");}
+});
 const referenceConfigs = {
   categorias: {label:"Categoria", collection:"categorias", id:"ID_Categoria", prefix:"CAT", fields:[
     {key:"Nome_Categoria",label:"Nome da categoria",required:true},
@@ -1727,11 +1941,11 @@ async function searchOperations() {
   const from = $("operationsDateFrom").value ? new Date($("operationsDateFrom").value + "T00:00:00") : null;
   const to = $("operationsDateTo").value ? new Date($("operationsDateTo").value + "T23:59:59") : null;
   const rows = [];
-  if (type !== "BAIXA") moves.filter(r => r.tipo === "TRANSFERENCIA").forEach(r => {
+  if (type === "TODAS" || type === "TRANSFERENCIA") moves.filter(r => r.tipo === "TRANSFERENCIA").forEach(r => {
     const asset = assets.find(a => String(a.Tombamento) === String(r.Tombamento || r.assetSnapshot?.Tombamento));
     rows.push({type:"TRANSFERENCIA", record:r, asset, date:new Date(r.transferDate || r.criadoEm || 0), sector:[r.setorOrigemNome,r.setorDestinoNome].filter(Boolean).join(" → "), responsible:[r.originResponsibleSnapshot?.Nome_Completo,r.destinationResponsibleSnapshot?.Nome_Completo,r.issuerSnapshot?.name].filter(Boolean).join(" "), reason:r.motivo || "", document:r.transferId || r.documento || ""});
   });
-  if (type !== "TRANSFERENCIA") disposals.forEach(r => {
+  if (type === "TODAS" || type === "BAIXA") disposals.forEach(r => {
     const asset = assets.find(a => String(a.Tombamento) === String(r.Tombamento));
     const sector = sectors.find(x => String(x.ID_Setor) === String(r.setorId || asset?.ID_Setor));
     const person = people.find(x => String(x.ID_Responsavel) === String(r.responsavelId || asset?.ID_Responsavel));
@@ -1786,7 +2000,9 @@ function renderOperationsSearchPage() {
     const values=[row.document || "Não informado",row.record.Tombamento || asset.Tombamento || "—",row.record.Descricao_Bem || asset.Descricao_Bem || "Bem patrimonial",row.type==="TRANSFERENCIA"?"Transferência":"Baixa patrimonial",Number.isNaN(row.date.getTime())?"Data não informada":formatBrazilDateTime(row.date)];
     values.forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td)});
     const actions=document.createElement("td"), btn=document.createElement("button"); btn.type="button";btn.className="button button-primary";btn.textContent="Baixar PDF";
-    btn.addEventListener("click",()=>{ if(row.type==="TRANSFERENCIA") downloadTransferTermPdf(row.record); else {const allSectors=window.__operationsSectors||[];const allPeople=window.__operationsPeople||[];const sector=allSectors.find(x=>String(x.ID_Setor)===String(row.record.setorId||asset.ID_Setor));const person=allPeople.find(x=>String(x.ID_Responsavel)===String(row.record.responsavelId||asset.ID_Responsavel));downloadDisposalDocument(row.record,asset,sector,person);} });actions.append(btn);tr.append(actions);body.append(tr);
+    btn.textContent="Baixar PDF";
+    btn.addEventListener("click",()=>{ if(row.type==="TRANSFERENCIA") downloadTransferTermPdf(row.record); else {const allSectors=window.__operationsSectors||[];const allPeople=window.__operationsPeople||[];const sector=allSectors.find(x=>String(x.ID_Setor)===String(row.record.setorId||asset.ID_Setor));const person=allPeople.find(x=>String(x.ID_Responsavel)===String(row.record.responsavelId||asset.ID_Responsavel));downloadDisposalDocument(row.record,asset,sector,person);} });
+    actions.append(btn);tr.append(actions);body.append(tr);
   });
   tableWrap.append(table);host.append(tableWrap);pagination.replaceChildren();pagination.hidden=false;
   const summary=document.createElement("span");summary.textContent=`Exibindo ${start+1}–${Math.min(start+size,total)} de ${total} operações · Página ${operationsSearchPage} de ${pages}`;pagination.append(summary);
@@ -1828,6 +2044,10 @@ document.querySelectorAll(".nav-tab").forEach(button => button.addEventListener(
   if (button.dataset.view === "transferView") {
     try { await loadTransferView(); }
     catch (error) { setMessage("transferMessage", `Não foi possível carregar os dados para transferência: ${error.message}`, "error"); }
+  }
+  if (button.dataset.view === "assetExitView") {
+    try { await loadAssetExitView(); }
+    catch (error) { setMessage("assetExitMessage", `Não foi possível carregar as saídas: ${error.message}`, "error"); }
   }
   if (button.dataset.view === "disposalView") {
     try { await loadDisposalView(); }

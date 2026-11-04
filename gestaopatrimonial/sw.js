@@ -1,4 +1,4 @@
-const CACHE_NAME = "delunatech-patrimonial-local-v10";
+const CACHE_NAME = "delunatech-patrimonial-local-v10-saidas-v1-exit-v9";
 const APP_SHELL = [
   "./", "./index.html", "./css/style.css", "./js/app.js", "./js/db.js",
   "./js/schema.js", "./js/importacao.js", "./manifest.json",

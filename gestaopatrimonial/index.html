@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07112B">
+  <meta name="application-name" content="DeLunaTech Gestão Patrimonial">
+  <link rel="icon" type="image/png" href="./assets/icone-gestao-patrimonial.png">
+  <meta name="description" content="Demonstração pública local do Controle de Bens Patrimoniais DeLunaTech. Os dados ficam somente neste navegador.">
+  <title>Gestão Patrimonial | DeLunaTech</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup">
+      <img class="brand-symbol" src="./assets/delunatech-emblema.png" alt="Símbolo DeLunaTech">
+      <div class="brand-copy">
+        <p class="eyebrow">DELUNATECH <span>•</span> TECNOLOGIA QUE SIMPLIFICA.</p>
+        <h1>Gestão <span>Patrimonial</span></h1>
+        <p class="brand-subtitle">Demonstração interativa · armazenamento local</p>
+      </div>
+    </div>
+    <div id="sessionBox" class="session-box"><span id="sessionUser">Demonstração local · dados neste navegador</span><span class="local-status"><i></i> 100% local</span></div>
+  </header>
+
+  <main>
+    <section id="appView">
+      <div class="demo-notice" role="note"><strong>Ambiente de demonstração</strong><span>Use dados fictícios. As alterações ficam neste navegador; limpar os dados do navegador pode apagá-las. Não há login, sincronização ou banco de dados online.</span></div>
+      <nav class="nav-tabs" aria-label="Seções do portal">
+        
+        <button class="nav-tab" data-view="assetFormView" id="assetFormNavTab">Cadastrar Bem</button>
+        <button class="nav-tab" data-view="referenceView" id="referenceNavTab">Cadastros Básicos</button>
+        <button class="nav-tab" data-view="institutionalView" id="institutionalNavTab">Configurações Institucionais</button>
+        <button class="nav-tab" data-view="assetsView">Bens Patrimoniais</button>
+        <button class="nav-tab" data-view="transferView">Transferir Bem</button>
+        <button class="nav-tab" data-view="sectorLocationView" id="sectorLocationNavTab">Localização dos setores</button>
+        <button class="nav-tab" data-view="assetExitView" id="assetExitNavTab">Saída de bens</button>
+        <button class="nav-tab" data-view="disposalView" id="disposalNavTab">Baixa patrimonial</button>
+        <button class="nav-tab" data-view="operationsSearchView" id="operationsSearchNavTab">Consultar operações</button>
+        <button class="nav-tab" data-view="reportView">Relatório Geral</button>
+        </nav>
+
+      <section id="institutionalView" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">ADMINISTRAÇÃO PATRIMONIAL</p><h2>Configurações institucionais</h2><p class="section-description">Configure o responsável pelo Patrimônio e as pessoas autorizadas a emitir termos de transferência.</p></div></div>
+        <div class="panel">
+          <section class="institutional-settings panel" aria-labelledby="institutionalSettingsTitle">
+            <h3 id="institutionalSettingsTitle">Configurações institucionais</h3>
+            <p>Defina o gestor patrimonial e mantenha a lista de pessoas autorizadas a emitir termos de transferência. Os dados ficam salvos neste navegador.</p>
+            <form id="institutionalSettingsForm">
+              <div class="reference-fields">
+                <div><label for="patrimonyManagerName">Nome do responsável pelo Patrimônio</label><input id="patrimonyManagerName" required maxlength="120" placeholder="Digite o nome do responsável cadastrado" autocomplete="off" aria-autocomplete="list" aria-expanded="false"><div id="patrimonyManagerSuggestions" class="responsible-suggestions" hidden></div></div>
+                <div><label for="patrimonyManagerRole">Cargo ou função</label><input id="patrimonyManagerRole" maxlength="120" placeholder="Ex.: Gestor do Patrimônio"></div>
+                <div><label for="patrimonyManagerUnit">Unidade de atuação</label><input id="patrimonyManagerUnit" maxlength="120" placeholder="Unidade administrativa"></div>
+                <div><label for="patrimonyManagerRegistration">Matrícula funcional (opcional)</label><input id="patrimonyManagerRegistration" maxlength="60"></div>
+              </div>
+              <div class="button-row"><button class="button button-primary" type="submit">Salvar responsável pelo Patrimônio</button></div>
+              <p id="institutionalSettingsMessage" class="message" role="status"></p>
+            </form>
+            <hr>
+            <h4>Emissores autorizados a gerar transferências</h4>
+            <form id="transferIssuerForm">
+              <div class="reference-fields">
+                <div><label for="issuerName">Nome completo</label><input id="issuerName" required maxlength="120" placeholder="Digite o nome do responsável cadastrado" autocomplete="off" aria-autocomplete="list" aria-expanded="false"><div id="issuerNameSuggestions" class="responsible-suggestions" hidden></div></div>
+                <div><label for="issuerRole">Cargo ou função</label><input id="issuerRole" required maxlength="120" placeholder="Ex.: Assistente administrativo"></div>
+                <div><label for="issuerRegistration">Matrícula (opcional)</label><input id="issuerRegistration" maxlength="60"></div>
+              </div>
+              <div class="button-row"><button class="button button-primary" type="submit">Cadastrar emissor</button></div>
+            </form>
+            <p id="issuerMessage" class="message" role="status"></p>
+            <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Função</th><th>Matrícula</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="issuerTableBody"><tr><td colspan="5">Nenhum emissor cadastrado.</td></tr></tbody></table></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="assetsView" class="view">
+        <div class="section-heading">
+          <div><p class="eyebrow">INVENTÁRIO</p><h2>Consulta de bens</h2><p class="section-description">Consulte o patrimônio e acompanhe os principais indicadores em uma única tela.</p></div>
+        </div>
+        <div class="metrics assets-overview-metrics">
+          <article class="metric"><span>Total de bens</span><strong id="totalAssets">—</strong></article>
+          <article class="metric"><span>Bens ativos</span><strong id="activeAssets">—</strong></article>
+          <article class="metric"><span>Bens baixados</span><strong id="retiredAssets">—</strong></article>
+        </div>
+        <div class="panel base-status-panel"><h3>Estado da base de demonstração</h3><p id="databaseStatus">Os dados são mantidos apenas neste navegador.</p></div>
+        <div class="panel">
+          <div class="search-grid">
+            <div><label for="assetSearch">Pesquisar</label><input id="assetSearch" type="search" autocomplete="off" placeholder="Digite tombamento, série, descrição, marca ou modelo"><div id="assetSearchResults" class="search-results" role="listbox" aria-label="Sugestões de bens"></div></div>
+            <div><label for="categoryFilter">Categoria</label><select id="categoryFilter"><option value="">Todas</option></select></div>
+            <div><label for="sectorFilter">Setor</label><select id="sectorFilter"><option value="">Todos</option></select></div>
+            <div><label for="responsibleFilter">Responsável</label><select id="responsibleFilter"><option value="">Todos</option></select></div>
+            <div><label for="statusFilter">Situação</label><select id="statusFilter"><option value="">Todas</option><option>Ativo</option><option>Baixado</option></select></div>
+            <button id="searchBtn" class="button button-primary">Pesquisar</button>
+          </div>
+          <p id="assetsMessage" class="message" role="status"></p><p class="small-note">Selecione uma linha para abrir a ficha completa do bem.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tombamento</th><th>Descrição</th><th>Categoria</th><th>Setor</th><th>Unidade/Edifício</th><th>Andar</th><th>Sala / local físico</th><th>Responsável</th><th>Situação</th><th>Ações</th></tr></thead>
+              <tbody id="assetsTableBody"><tr><td colspan="10">A consulta será carregada com os dados locais disponíveis.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="operationsSearchView" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">CONSULTA DOCUMENTAL</p><h2>Consultar operações</h2><p class="section-description">Pesquise transferências e baixas patrimoniais e emita novamente seus documentos.</p></div></div>
+        <div class="panel">
+          <div class="search-grid operations-search-grid">
+            <div><label for="operationsType">Tipo de operação</label><select id="operationsType"><option value="TODAS">Todas as operações</option><option value="TRANSFERENCIA">Transferências</option><option value="BAIXA">Baixas patrimoniais</option></select></div>
+            <div><label for="operationsDocument">Número do documento</label><input id="operationsDocument" type="search" list="operationsDocumentSuggestions" placeholder="Número do termo ou processo"><datalist id="operationsDocumentSuggestions"></datalist></div>
+            <div><label for="operationsAsset">Tombamento ou série</label><input id="operationsAsset" type="search" list="operationsAssetSuggestions" placeholder="Tombamento / série"><datalist id="operationsAssetSuggestions"></datalist></div>
+            <div><label for="operationsDescription">Descrição do bem</label><input id="operationsDescription" type="search" list="operationsDescriptionSuggestions" placeholder="Descrição, marca ou modelo"><datalist id="operationsDescriptionSuggestions"></datalist></div>
+            <div><label for="operationsSector">Setor</label><input id="operationsSector" type="search" list="operationsSectorSuggestions" placeholder="Origem, destino ou setor da baixa"><datalist id="operationsSectorSuggestions"></datalist></div>
+            <div><label for="operationsResponsible">Responsável</label><input id="operationsResponsible" type="search" list="operationsResponsibleSuggestions" placeholder="Nome do responsável"><datalist id="operationsResponsibleSuggestions"></datalist></div>
+            <div><label for="operationsReason">Motivo</label><input id="operationsReason" type="search" list="operationsReasonSuggestions" placeholder="Motivo da operação"><datalist id="operationsReasonSuggestions"></datalist></div>
+            <div><label for="operationsDateFrom">Data inicial</label><input id="operationsDateFrom" type="date"></div>
+            <div><label for="operationsDateTo">Data final</label><input id="operationsDateTo" type="date"></div>
+            <div><label for="operationsPageSize">Resultados por página</label><select id="operationsPageSize"><option>25</option><option>50</option><option>100</option></select></div>
+          </div>
+          <div class="button-row"><button id="searchOperationsBtn" class="button button-primary" type="button">Pesquisar</button><button id="clearOperationsSearchBtn" class="button button-secondary" type="button">Limpar filtros</button></div>
+          <p id="operationsSearchMessage" class="message" role="status"></p>
+          <div id="operationsResults" class="operations-results"><p class="small-note">Informe os filtros e selecione Pesquisar.</p></div>
+          <div id="operationsPagination" class="operations-pagination" hidden></div>
+        </div>
+      </section>
+
+      <section id="reportView" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">RELATÓRIOS</p><h2>Relatório Geral do Inventário Patrimonial</h2></div></div>
+        <div class="panel">
+          <div class="report-filters">
+            <div><label for="reportSearch">Tombamento ou descrição</label><input id="reportSearch" placeholder="Pesquisar bem"></div>
+            <div><label for="reportCategory">Categoria</label><select id="reportCategory"><option value="">Todas</option></select></div>
+            <div><label for="reportUnit">Unidade</label><select id="reportUnit"><option value="">Todas</option></select></div>
+            <div><label for="reportSector">Setor</label><select id="reportSector"><option value="">Todos</option></select></div>
+            <div><label for="reportResponsible">Responsável</label><select id="reportResponsible"><option value="">Todos</option></select></div>
+            <div><label for="reportStatus">Situação</label><select id="reportStatus"><option value="Ativo">Ativos</option><option value="">Todas as situações</option><option value="Baixado">Baixados</option></select></div>
+            <div><label for="reportSort">Ordenar por</label><select id="reportSort"><option value="tombamento">Tombamento crescente</option><option value="descricao">Descrição</option><option value="categoria">Categoria</option><option value="setor">Setor</option></select></div>
+            <button id="runReportBtn" class="button button-primary" type="button">Atualizar relatório</button>
+          </div>
+          <div class="report-metrics">
+            <article class="metric"><span>Bens encontrados</span><strong id="reportCount">—</strong></article>
+            <article class="metric"><span>Bens ativos</span><strong id="reportActiveCount">—</strong></article>
+            <article class="metric"><span>Valor de aquisição conhecido</span><strong id="reportValue">—</strong></article>
+            <article class="metric"><span>Sem valor informado</span><strong id="reportMissingValue">—</strong></article>
+          </div>
+          <p id="reportMessage" class="message" role="status"></p>
+          <div class="button-row"><button id="exportReportExcel" class="button button-secondary" type="button">Exportar Excel</button><button id="exportReportPdf" class="button button-secondary" type="button">Exportar PDF</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Tombamento</th><th>Descrição</th><th>Categoria</th><th>Marca</th><th>Modelo</th><th>Nº série</th><th>Unidade</th><th>Andar</th><th>Local físico</th><th>Setor</th><th>Responsável</th><th>Situação</th><th>Data aquisição</th><th>Valor aquisição</th></tr></thead><tbody id="reportTableBody"><tr><td colspan="14">Carregue o relatório.</td></tr></tbody></table></div>
+          <p class="small-note">Os resultados e totais respeitam os filtros. Observações completas serão incluídas na exportação Excel, não na tabela principal do PDF.</p>
+        </div>
+      </section>
+
+      <section id="transferView" class="view" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">MOVIMENTAÇÃO PATRIMONIAL</p><h2>Transferir bem</h2></div>
+        </div>
+        <div class="panel">
+          <p>Selecione o bem e informe o setor de destino. A localização atual é obtida pelo setor de origem; a confirmação registra a movimentação e atualiza o vínculo do bem imediatamente.</p>
+          <div id="transferReviewCard" class="transfer-review-card" hidden aria-live="polite">
+            <div class="transfer-review-header">
+              <div><p class="eyebrow">CONFERÊNCIA DA OPERAÇÃO</p><h3>Revise a transferência</h3></div>
+              <span class="review-status">Aguardando confirmação</span>
+            </div>
+            <div id="transferReviewContent" class="transfer-review-grid"></div>
+            <div class="transfer-review-actions">
+              <button id="editTransferBtn" class="button button-secondary" type="button">Voltar e corrigir</button>
+              <button id="finalConfirmTransferBtn" class="button button-primary" type="button">Confirmar transferência</button>
+            </div>
+          </div>
+          <form id="transferForm">
+            <label for="transferAssetSearch">Pesquisar bem patrimonial</label>
+            <input id="transferAssetSearch" type="search" autocomplete="off" placeholder="Digite tombamento, série, descrição, marca, modelo, setor ou responsável">
+            <div id="transferAssetResults" class="search-results" role="listbox" aria-label="Resultados de bens para transferência"></div>
+            <select id="transferAsset" class="search-source-select" required aria-label="Bem patrimonial selecionado"><option value="">Selecione um bem</option></select>
+            <div id="transferOrigin" class="notice"><strong>Origem atual</strong><p>Selecione um bem para consultar a origem.</p></div>
+            <label for="transferSectorSearch">Pesquisar setor de destino</label>
+            <input id="transferSectorSearch" type="search" autocomplete="off" placeholder="Digite o nome do setor, unidade, andar ou sala">
+            <div id="transferSectorResults" class="search-results" role="listbox" aria-label="Resultados de setores de destino"></div>
+            <select id="transferSector" class="search-source-select" required aria-label="Setor de destino selecionado"><option value="">Selecione o setor de destino</option></select>
+            <div id="transferDestination" class="notice"><strong>Destino</strong><p>Selecione um setor para consultar sua localização.</p></div>
+            <label for="transferIssuer">Responsável pela emissão do documento</label>
+            <select id="transferIssuer" required><option value="">Selecione quem está emitindo o documento</option></select>
+            <p class="small-note">Cadastre os emissores autorizados em aba Configurações Institucionais.</p>
+            <label for="transferReason">Motivo da transferência</label>
+            <select id="transferReason" required>
+              <option value="">Selecione o motivo</option>
+              <option>Remanejamento interno</option>
+              <option>Reorganização de setor</option>
+              <option>Necessidade operacional</option>
+              <option>Substituição de responsável</option>
+              <option>Correção cadastral</option>
+              <option>Outro</option>
+            </select>
+            <label for="transferNotes">Observações (opcional)</label>
+            <textarea id="transferNotes" rows="3" placeholder="Detalhes adicionais da transferência"></textarea>
+            <div class="button-row">
+              <button id="confirmTransferBtn" class="button button-primary" type="submit">Revisar e confirmar transferência</button>
+            </div>
+            <p id="transferMessage" class="message" role="status"></p>
+          </form>
+          <div id="transferTermPrompt" class="transfer-review-card" hidden aria-live="polite">
+            <div class="transfer-review-header"><div><p class="eyebrow">TRANSFERÊNCIA REGISTRADA</p><h3>Deseja gerar o termo de transferência?</h3></div></div>
+            <p>O bem já foi transferido e o histórico foi salvo. Você pode baixar o PDF agora ou recuperá-lo posteriormente no histórico abaixo.</p>
+            <div class="transfer-review-actions"><button id="skipTransferTermBtn" class="button button-secondary" type="button">Agora não</button><button id="generateTransferTermBtn" class="button button-primary" type="button">Baixar termo em PDF</button></div>
+          </div>
+          
+        </div>
+      </section>
+
+      <section id="disposalView" class="view" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">CONTROLE PATRIMONIAL</p><h2>Baixa patrimonial</h2></div>
+        </div>
+        <div class="panel">
+          <div class="notice">
+            <strong>Atenção</strong>
+            <p>A baixa altera a situação do bem para “Baixado”, registra o motivo e preserva o tombamento e o histórico. O registro não poderá ser excluído pelo portal.</p>
+          </div>
+          <form id="disposalForm">
+            <label for="disposalAssetSearch">Pesquisar bem patrimonial</label>
+            <input id="disposalAssetSearch" type="search" autocomplete="off" placeholder="Digite tombamento, série, descrição, marca, modelo, setor ou responsável">
+            <div id="disposalAssetResults" class="search-results" role="listbox" aria-label="Resultados de bens para baixa patrimonial"></div>
+            <select id="disposalAsset" class="search-source-select" required aria-label="Bem patrimonial selecionado"><option value="">Selecione um bem</option></select>
+            <div id="disposalAssetSummary" class="notice"><strong>Bem selecionado</strong><p>Selecione um bem para consultar seus dados.</p></div>
+            <label for="disposalReason">Motivo da baixa</label>
+            <select id="disposalReason" required>
+              <option value="">Selecione o motivo</option>
+              <option>Inservibilidade</option>
+              <option>Extravio</option>
+              <option>Furto ou roubo</option>
+              <option>Dano irreparável</option>
+              <option>Alienação</option>
+              <option>Doação</option>
+              <option>Desfazimento autorizado</option>
+              <option>Outro</option>
+            </select>
+            <label for="disposalDocument">Documento de autorização / processo</label>
+            <input id="disposalDocument" placeholder="Número do processo ou documento (se houver)">
+            <label for="disposalNotes">Observações</label>
+            <textarea id="disposalNotes" rows="3" placeholder="Detalhes que fundamentam a baixa"></textarea>
+            <div class="button-row"><button id="reviewDisposalBtn" class="button button-primary" type="submit">Revisar baixa</button></div>
+            <p id="disposalMessage" class="message" role="status"></p>
+          </form>
+          <div id="disposalReviewCard" class="transfer-review-card" hidden>
+            <div class="transfer-review-header">
+              <div><p class="eyebrow">CONFERÊNCIA DA OPERAÇÃO</p><h3>Revise a baixa patrimonial</h3></div>
+              <span class="review-status">Aguardando confirmação</span>
+            </div>
+            <div id="disposalReviewContent" class="transfer-review-grid"></div>
+            <div class="transfer-review-actions">
+              <button id="editDisposalBtn" class="button button-secondary" type="button">Voltar e corrigir</button>
+              <button id="confirmDisposalBtn" class="button button-danger" type="button">Confirmar baixa</button>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <section id="assetExitView" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">CONTROLE DE SAÍDAS</p><h2>Saída de bens</h2><p class="section-description">Registre empréstimos, manutenções, garantias e outras saídas temporárias. O bem permanece vinculado à sua origem até o retorno.</p></div></div>
+        <div class="metrics">
+          <button class="metric metric-action" id="showExitOpenBtn" type="button" aria-controls="exitOpenListPanel" aria-expanded="false"><span>Bens fora da unidade</span><strong id="exitOpenCount">0</strong><small>Ver bens que ainda não retornaram</small></button>
+          <button class="metric metric-action" id="showExitHistoryBtn" type="button" aria-controls="exitHistoryPanel" aria-expanded="false"><span>Ocorrências registradas</span><strong id="exitTotalCount">0</strong><small>Consultar histórico completo</small></button>
+          <article class="metric"><span>Custos acumulados</span><strong id="exitTotalCost">R$ 0,00</strong></article>
+        </div>
+        <section id="exitOpenListPanel" class="panel exit-list-panel" hidden>
+          <div class="modal-heading"><div><h3>Bens fora da unidade</h3><p class="small-note">Saídas que ainda aguardam registro de retorno.</p></div><button class="button button-secondary" type="button" data-close-exit-panel>Fechar</button></div>
+          <div class="exit-list-filters" data-exit-filter="open">
+            <div class="exit-filter-search"><label for="exitOpenSearch">Pesquisar patrimônio</label><input id="exitOpenSearch" type="search" placeholder="Tombamento, descrição, série, destino ou transportador"></div>
+            <div class="exit-filter-fields"><div><label for="exitOpenType">Tipo de saída</label><select id="exitOpenType"><option value="">Todos os tipos</option><option value="EMPRESTIMO">Empréstimo</option><option value="MANUTENCAO">Manutenção</option><option value="GARANTIA">Garantia</option><option value="OUTRA">Outra saída</option></select></div><div><label for="exitOpenFrom">Data inicial da saída</label><input id="exitOpenFrom" type="date"></div><div><label for="exitOpenTo">Data final da saída</label><input id="exitOpenTo" type="date"></div><div><label for="exitOpenPageSize">Registros por página</label><select id="exitOpenPageSize"><option>25</option><option>50</option><option>100</option></select></div></div>
+            <div class="exit-filter-actions"><button class="button button-secondary" id="exitOpenClear" type="button">Limpar filtros</button><span id="exitOpenCountLabel" class="small-note" aria-live="polite"></span></div>
+          </div><div id="exitOpenList"></div><div id="exitOpenPagination" class="exit-pagination"></div>
+        </section>
+        <section id="exitHistoryPanel" class="panel exit-list-panel" hidden>
+          <div class="modal-heading"><div><h3>Ocorrências registradas</h3><p class="small-note">Histórico de saídas abertas e encerradas.</p></div><button class="button button-secondary" type="button" data-close-exit-panel>Fechar</button></div>
+          <div class="exit-list-filters" data-exit-filter="history">
+            <div class="exit-filter-search"><label for="exitHistorySearch">Pesquisar ocorrência</label><input id="exitHistorySearch" type="search" placeholder="Tombamento, descrição, série, destino ou transportador"></div>
+            <div class="exit-filter-fields"><div><label for="exitHistoryType">Tipo de saída</label><select id="exitHistoryType"><option value="">Todos os tipos</option><option value="EMPRESTIMO">Empréstimo</option><option value="MANUTENCAO">Manutenção</option><option value="GARANTIA">Garantia</option><option value="OUTRA">Outra saída</option></select></div><div><label for="exitHistoryStatus">Situação</label><select id="exitHistoryStatus"><option value="">Todas</option><option value="open">Em aberto</option><option value="closed">Encerradas</option></select></div><div><label for="exitHistoryFrom">Data inicial da saída</label><input id="exitHistoryFrom" type="date"></div><div><label for="exitHistoryTo">Data final da saída</label><input id="exitHistoryTo" type="date"></div><div><label for="exitHistoryPageSize">Registros por página</label><select id="exitHistoryPageSize"><option>25</option><option>50</option><option>100</option></select></div></div>
+            <div class="exit-filter-actions"><button class="button button-secondary" id="exitHistoryClear" type="button">Limpar filtros</button><span id="exitHistoryCountLabel" class="small-note" aria-live="polite"></span></div>
+          </div><div id="exitHistoryList"></div><div id="exitHistoryPagination" class="exit-pagination"></div>
+        </section>
+        <div class="panel">
+          <h3>Registrar nova saída</h3>
+          <p class="small-note">Cada saída gera uma ocorrência independente no histórico do patrimônio.</p>
+          <form id="assetExitForm">
+            <div><label for="exitAssetSearch">Patrimônio *</label><input id="exitAssetSearch" type="search" autocomplete="off" placeholder="Pesquise pelo tombamento ou descrição"><div id="exitAssetResults" class="search-results" role="listbox"></div><select id="exitAsset" class="search-source-select" required><option value="">Selecione um bem</option></select></div>
+            <div id="exitAssetSummary" class="notice"><strong>Bem selecionado</strong><p>Os dados de origem e responsável serão carregados automaticamente.</p></div>
+            <div class="asset-form-grid">
+              <div><label for="exitType">Motivo da saída *</label><select id="exitType" required><option value="">Selecione</option><option value="EMPRESTIMO">Empréstimo</option><option value="MANUTENCAO">Manutenção / conserto</option><option value="GARANTIA">Garantia</option><option value="OUTRA">Outra saída</option></select></div>
+              <div><label for="exitDestinationSelect">Destino *</label><select id="exitDestinationSelect" required><option value="">Selecione unidade ou destino</option><option value="__OTHER__">Empresa / outro destino</option></select></div>
+              <div id="exitDestinationOtherWrap" hidden><label for="exitDestination">Nome da empresa / destino *</label><input id="exitDestination" maxlength="180" placeholder="Informe o destino"></div>
+              <div><label for="exitTransporterSelect">Quem está transportando? *</label><select id="exitTransporterSelect" required><option value="">Selecione um servidor</option><option value="__OTHER__">Pessoa não cadastrada</option></select></div>
+              <div id="exitTransporterOtherWrap" hidden><label for="exitTransporter">Nome do transportador *</label><input id="exitTransporter" maxlength="140" placeholder="Nome completo"></div>
+              <div><label for="exitDate">Data da saída</label><input id="exitDate" type="date" required></div>
+              <div><label for="exitExpectedReturn">Previsão de retorno (opcional)</label><input id="exitExpectedReturn" type="date"></div>
+              <div id="exitServiceDescriptionWrap" class="asset-form-full" hidden><label for="exitServiceDescription">Motivo / finalidade</label><input id="exitServiceDescription" maxlength="240" placeholder="Informe brevemente o motivo"></div>
+              <div class="asset-form-full"><label for="exitNotes">Observações (opcional)</label><textarea id="exitNotes" rows="2" maxlength="1000" placeholder="Somente se necessário"></textarea></div>
+            </div>
+            <div class="button-row"><button class="button button-primary" type="submit">Registrar saída</button></div>
+            <p id="assetExitMessage" class="message" role="status"></p>
+          </form>
+        </div>
+        <p class="small-note">Saídas em aberto bloqueiam transferência, alteração de responsável/localização e baixa até o registro do retorno. Consulte os bens fora da unidade e o histórico nos cards acima. Os termos podem ser reimpressos diretamente nas listas.</p>
+      <section id="assetReturnPanel" class="panel asset-detail-inline" hidden aria-labelledby="assetReturnTitle">
+        <div class="modal-heading"><div><p class="eyebrow">ENCERRAMENTO DE SAÍDA</p><h2 id="assetReturnTitle">Registrar retorno do bem</h2></div><button id="cancelAssetReturnBtn" class="button button-secondary" type="button">Cancelar</button></div>
+        <div id="assetReturnExitSummary" class="notice"></div>
+        <h3 class="return-ficha-heading">Ficha do patrimônio</h3><div id="assetReturnAssetFicha" class="detail-grid return-asset-ficha"></div>
+        <h3 class="return-ficha-heading">Dados da saída</h3><div id="assetReturnExitFicha" class="detail-grid return-exit-ficha"></div>
+        <h3 class="return-ficha-heading">Registro de retorno</h3>
+        <form id="assetReturnForm"><input id="returnExitId" type="hidden"><div class="asset-form-grid">
+          <div><label for="returnDate">Data do retorno *</label><input id="returnDate" type="date" required></div>
+          <div><label for="returnCondition">Condição do bem no retorno *</label><select id="returnCondition" required><option value="">Selecione</option><option>Retornou em perfeito estado</option><option>Retornou com defeito</option><option>Retornou parcialmente recuperado</option><option>Retornou sem condições de uso</option></select></div>
+          <div class="asset-form-full"><label class="checkline"><input id="returnHasExpenses" type="checkbox"> Houve despesas com este atendimento?</label></div>
+          <div id="returnExpenseFields" class="asset-form-full" hidden><div class="asset-form-grid"><div><label for="returnRepairCost">Valor do conserto (R$)</label><input id="returnRepairCost" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off"></div>
+          <div><label for="returnServiceCost">Valor do serviço (R$)</label><input id="returnServiceCost" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off"></div>
+          <div><label for="returnTransportCost">Valor do translado (R$)</label><input id="returnTransportCost" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off"></div>
+          <div><label for="returnInvoice">Número da Nota Fiscal de Serviço</label><input id="returnInvoice" maxlength="100" placeholder="Número da NFS-e"></div>
+          <div><label for="returnInspectorSelect">Conferido por</label><select id="returnInspectorSelect"><option value="">Selecionar servidor (opcional)</option><option value="__OTHER__">Outro servidor</option></select></div>
+          <div id="returnInspectorOtherWrap" hidden><label for="returnInspector">Nome do responsável</label><input id="returnInspector" maxlength="140" placeholder="Nome completo"></div>
+          </div></div>
+          <div class="asset-form-full"><label for="returnServiceNotes">Observações sobre o serviço realizado</label><textarea id="returnServiceNotes" rows="2" maxlength="2000"></textarea></div>
+          <div class="asset-form-full"><label for="returnNotes">Observações sobre o retorno</label><textarea id="returnNotes" rows="2" maxlength="2000"></textarea></div>
+        </div><div class="button-row"><button class="button button-primary" type="submit">Confirmar retorno</button></div><p id="assetReturnMessage" class="message" role="status"></p></form>
+      </section>
+
+      </section>
+
+
+      <section id="assetDetailModal" class="panel asset-detail-inline" hidden aria-labelledby="assetDetailTitle">
+        <div class="modal-card-inline">
+          <div class="modal-heading">
+            <div><p class="eyebrow">CONSULTA PATRIMONIAL</p><h2 id="assetDetailTitle">Ficha do bem</h2></div>
+            <button id="closeAssetDetailBtn" class="button button-secondary" type="button">Fechar</button>
+          </div>
+          <p id="assetDetailMessage" class="message" role="status"></p>
+          <div id="assetDetailContent" class="detail-grid"></div>
+          <section class="detail-history">
+            <h3>Histórico do bem</h3>
+            <div id="assetHistoryContent"><p class="small-note">Consultando histórico...</p></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="sectorLocationView" class="view" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">ESTRUTURA FÍSICA</p><h2>Alterar localização do setor</h2></div>
+        </div>
+        <div class="panel">
+          <p>Quando um setor mudar de sala, andar ou unidade, altere a localização do setor uma única vez. Os bens vinculados passarão a exibir a nova localização, e a alteração ficará registrada no histórico.</p>
+          <form id="sectorLocationForm">
+            <label for="locationSectorSearch">Pesquisar setor</label>
+            <input id="locationSectorSearch" type="search" autocomplete="off" placeholder="Digite o nome do setor ou parte dele">
+            <div id="locationSectorResults" class="search-results" role="listbox" aria-label="Resultados de setores"></div>
+            <select id="locationSectorSelect" class="search-source-select" required aria-label="Setor selecionado"><option value="">Selecione um setor</option></select>
+            <div id="sectorLocationCurrent" class="notice"><strong>Localização atual</strong><p>Selecione um setor.</p></div>
+            <div class="asset-form-grid">
+              <div><label for="locationUnitSelect">Unidade / edifício *</label><select id="locationUnitSelect" required><option value="">Selecione</option></select></div>
+              <div><label for="locationFloorSelect">Andar *</label><select id="locationFloorSelect" required><option value="">Selecione a unidade primeiro</option></select></div>
+              <div><label for="locationPlaceSelect">Sala / local físico *</label><select id="locationPlaceSelect" required><option value="">Selecione o andar primeiro</option></select></div>
+              <div><label for="sectorLocationReason">Motivo da alteração *</label><select id="sectorLocationReason" required>
+                <option value="">Selecione o motivo</option><option>Reorganização física</option><option>Reforma</option><option>Mudança de unidade</option><option>Correção cadastral</option><option>Outro</option>
+              </select></div>
+              <div class="asset-form-full"><label for="sectorLocationNotes">Observações</label><textarea id="sectorLocationNotes" rows="3"></textarea></div>
+            </div>
+            <div class="button-row"><button class="button button-primary" type="submit">Revisar alteração</button></div>
+            <p id="sectorLocationMessage" class="message" role="status"></p>
+          </form>
+          <div id="sectorLocationReview" class="transfer-review-card" hidden>
+            <div class="transfer-review-header"><div><p class="eyebrow">CONFERÊNCIA DA OPERAÇÃO</p><h3>Alteração de localização do setor</h3></div><span class="review-status">Aguardando confirmação</span></div>
+            <div id="sectorLocationReviewContent" class="transfer-review-grid"></div>
+            <div class="transfer-review-actions"><button id="editSectorLocationBtn" class="button button-secondary" type="button">Voltar e corrigir</button><button id="confirmSectorLocationBtn" class="button button-primary" type="button">Confirmar alteração</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="assetFormView" class="view" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">INVENTÁRIO</p><h2 id="assetFormTitle">Cadastrar bem patrimonial</h2></div>
+        </div>
+        <div class="panel">
+          <p>Preencha os dados do bem. A unidade, o andar e a sala são determinados automaticamente pelo setor selecionado.</p>
+          <form id="assetForm">
+            <input type="hidden" id="assetEditingTombamento">
+            <div class="asset-form-grid">
+              <div><label for="newAssetTombamento">Tombamento *</label><input id="newAssetTombamento" required inputmode="numeric" maxlength="40" placeholder="Número patrimonial"></div>
+              <div><label for="newAssetDescription">Descrição *</label><input id="newAssetDescription" required maxlength="200" placeholder="Descrição do bem"></div>
+              <div><label for="newAssetCategory">Categoria *</label><select id="newAssetCategory" required><option value="">Selecione</option></select></div>
+              <div><label for="newAssetStatus">Situação</label><input id="newAssetStatus" value="Ativo" readonly></div>
+              <div><label for="newAssetBrand">Marca</label><input id="newAssetBrand" maxlength="100"></div>
+              <div><label for="newAssetModel">Modelo</label><input id="newAssetModel" maxlength="100"></div>
+              <div><label for="newAssetSerial">Número de série</label><input id="newAssetSerial" maxlength="100"></div>
+              <div><label for="newAssetUnit">Unidade / edifício *</label><select id="newAssetUnit" required><option value="">Selecione uma unidade</option></select></div>
+              <div><label for="newAssetSector">Setor *</label><select id="newAssetSector" required><option value="">Selecione a unidade primeiro</option></select></div>
+              <div><label for="newAssetResponsible">Responsável *</label><select id="newAssetResponsible" required><option value="">Selecione</option></select></div>
+              <div><label for="newAssetAcquisitionDate">Data de aquisição</label><input id="newAssetAcquisitionDate" type="date"></div>
+              <div><label for="newAssetAcquisitionValue">Valor de aquisição (R$)</label><input id="newAssetAcquisitionValue" inputmode="decimal" placeholder="0,00"></div>
+              <div class="asset-location-preview"><strong>Localização calculada pelo setor</strong><p id="newAssetLocationPreview">Selecione um setor para consultar a localização.</p></div>
+              <div class="asset-form-full"><label for="newAssetNotes">Observações</label><textarea id="newAssetNotes" rows="3" maxlength="2000"></textarea></div>
+            </div>
+            <div class="button-row">
+              <button id="saveAssetBtn" class="button button-primary" type="submit">Salvar bem</button>
+              <button id="cancelAssetEditBtn" class="button button-secondary" type="button" hidden>Cancelar edição</button>
+            </div>
+            <section id="tombamentoConfirmationCard" class="tombamento-confirmation-card" aria-live="polite" hidden>
+              <div class="tombamento-confirmation-header">
+                <div><p class="eyebrow">CONFERÊNCIA OBRIGATÓRIA</p><h3 id="tombamentoConfirmationTitle">1ª confirmação — Conferência do tombamento</h3></div>
+                <span id="tombamentoConfirmationStep" class="review-status">ETAPA 1 DE 2</span>
+              </div>
+              <p id="tombamentoConfirmationText">Compare o número completo com a etiqueta física do bem ou com a documentação patrimonial.</p>
+              <div class="tombamento-number-panel">
+                <span>TOMBAMENTO DO BEM</span>
+                <strong id="tombamentoConfirmationNumber">—</strong>
+                <p>Confira todos os dígitos, da esquerda para a direita.</p>
+              </div>
+              <p class="tombamento-warning">Atenção: um erro de digitação pode vincular informações ao patrimônio errado e causar inconsistências graves.</p>
+              <div class="transfer-review-actions">
+                <button id="cancelTombamentoConfirmationBtn" class="button button-secondary" type="button">Cancelar confirmação</button>
+                <button id="confirmTombamentoNextBtn" class="button button-primary" type="button">Confirmo a conferência</button>
+              </div>
+            </section>
+            <p id="assetFormMessage" class="message" role="status"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="referenceView" class="view" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">ADMINISTRAÇÃO PATRIMONIAL</p><h2>Cadastros básicos</h2></div>
+        </div>
+        <div class="panel">
+          <p>Gerencie categorias, unidades, andares, locais físicos, setores e responsáveis. Os identificadores são gerados automaticamente para novos cadastros. Registros já utilizados por bens não podem ser excluídos por esta tela.</p>
+          <div id="referenceTypeCards" class="reference-type-cards" aria-label="Tipos de cadastro"></div>
+          <div id="referenceNewButtonRow" class="reference-new-button-row">
+            <button id="newReferenceBtn" class="button button-primary" type="button">Nova categoria</button>
+          </div>
+          <div class="reference-toolbar">
+            <div><label for="referenceType">Tipo de cadastro</label>
+              <select id="referenceType">
+                <option value="categorias">Categorias</option>
+                <option value="unidades">Unidades / edifícios</option>
+                <option value="andares">Andares</option>
+                <option value="locais">Locais físicos</option>
+                <option value="setores">Setores</option>
+                <option value="responsaveis">Responsáveis</option>
+              </select>
+            </div>
+          </div>
+          <p id="referenceMessage" class="message" role="status"></p>
+          <div class="table-wrap"><table><thead id="referenceTableHead"></thead><tbody id="referenceTableBody"></tbody></table></div>
+          <div id="referenceFormCard" class="reference-form-card" hidden>
+            <h3 id="referenceFormTitle">Novo cadastro</h3>
+            <form id="referenceForm">
+              <div id="referenceFields" class="reference-fields"></div>
+              <div class="button-row">
+                <button id="saveReferenceBtn" class="button button-primary" type="submit">Salvar cadastro</button>
+                <button id="cancelReferenceBtn" class="button button-secondary" type="button">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="importView" class="view" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">CARGA DE DADOS</p><h2>Importar planilha Excel</h2></div>
+        </div>
+        <div class="panel">
+          <div class="notice">
+            <strong>Importação local de dados</strong>
+            <p>Selecione uma cópia do modelo oficial. O portal validará abas, identificadores, tombamentos e referências antes de gravar os dados exclusivamente neste navegador.</p>
+          </div>
+          <label for="workbookFile">Arquivo .xlsx</label>
+          <input id="workbookFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <div class="button-row">
+            <button id="validateImportBtn" class="button button-primary">Validar e visualizar</button>
+            <button id="commitImportBtn" class="button button-danger" disabled>Confirmar importação</button>
+          </div>
+          <p id="importMessage" class="message" role="status"></p>
+          <div id="importSummary" class="import-summary" hidden></div>
+          <div id="importErrors" class="error-list" hidden></div>
+          <p class="small-note">A importação inicial só funciona com a base local vazia. Os dados não são enviados a servidores e não serão compartilhados entre dispositivos.</p>
+          <div class="danger-zone">
+            <h3>Limpeza dos dados locais</h3>
+            <p>Remove cadastros principais guardados neste navegador. O histórico local de movimentações e auditoria será preservado. Esta ação afeta somente este dispositivo.</p>
+            <label for="resetPhrase">Digite APAGAR DADOS DE TESTE para habilitar</label>
+            <input id="resetPhrase" autocomplete="off" placeholder="APAGAR DADOS DE TESTE">
+            <button id="resetTestDataBtn" class="button button-danger" disabled>Apagar cadastros locais</button>
+            <p id="resetMessage" class="message" role="status"></p>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer><span class="footer-brand">DeLunaTech <span>·</span> Tecnologia que simplifica.</span><span>Demonstração pública — dados armazenados somente neste navegador.</span></footer>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

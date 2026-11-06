@@ -1,0 +1,24 @@
+{
+  "name": "Compras Fácil | DeLunaTech",
+  "short_name": "Compras Fácil",
+  "description": "Organize listas e acompanhe suas compras.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F7FC",
+  "theme_color": "#07152F",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

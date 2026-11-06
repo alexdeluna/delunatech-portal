@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#07152F">
+  <meta name="description" content="Organize suas listas e acompanhe suas compras com Compras Fácil.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <title>Compras Fácil</title>
+
+  <link rel="stylesheet" href="css/style.css">
+<script src="js/app.js" defer></script>
+</head>
+
+<body>
+
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <div class="brand-icon"><img src="assets/images/icon-compras-facil.png" alt="Ícone Compras Fácil"></div>
+        <div>
+          <h1>Compras Fácil</h1>
+          <p>Uma experiência DeLunaTech</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- TELA: MINHAS LISTAS -->
+    <section id="screen-lists" class="screen active">
+
+      <div class="section-heading">
+        <div>
+          <h2>Minhas listas</h2>
+          <p>Organize seus produtos em listas.</p>
+        </div>
+
+        <span id="list-count" class="count-badge">0 listas</span>
+      </div>
+
+      <div class="main-actions">
+        <button type="button" class="btn btn-primary btn-new-list" id="btn-new-list">
+          <span>＋</span> Criar nova lista
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-history">Histórico de compras</button>
+      </div>
+
+      <div id="lists-container" class="lists-container">
+
+        <div class="empty-state">
+          <div class="empty-icon">🛍️</div>
+          <h3>Nenhuma lista cadastrada</h3>
+          <p>Crie sua primeira lista para começar.</p>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TELA: CADASTRO DE LISTA -->
+    <section id="screen-editor" class="screen">
+
+      <div class="editor-heading">
+        <button
+          type="button"
+          class="btn-back"
+          id="btn-back"
+          aria-label="Voltar para minhas listas"
+        >
+          ←
+        </button>
+
+        <div>
+          <h2 id="editor-title">Nova lista</h2>
+          <p>Adicione os produtos que deseja comprar.</p>
+        </div>
+      </div>
+
+      <div class="form-card">
+
+        <label for="list-name">Nome da lista</label>
+
+        <input
+          type="text"
+          id="list-name"
+          placeholder="Ex.: Compras da semana"
+          maxlength="60"
+        >
+
+        <div class="divider"></div>
+
+        <h3>Adicionar produtos</h3>
+
+        <div class="product-form">
+
+          <div class="field">
+            <label for="product-name">Nome do produto</label>
+            <input
+              type="text"
+              id="product-name"
+              placeholder="Ex.: Arroz"
+              maxlength="80"
+            >
+          </div>
+
+          <div class="field">
+            <label for="product-quantity">Quantidade</label>
+            <input
+              type="number"
+              id="product-quantity"
+              placeholder="1"
+              min="0.01"
+              step="any"
+              inputmode="decimal"
+            >
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-add"
+            id="btn-add-product"
+          >
+            ＋ Adicionar produto
+          </button>
+
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="products-heading">
+          <h3>Produtos da lista</h3>
+          <span id="product-count">0 produtos</span>
+        </div>
+
+        <div id="products-container" class="products-container">
+
+          <div class="empty-products">
+            Nenhum produto adicionado.
+          </div>
+
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-primary btn-save"
+          id="btn-save-list"
+        >
+          Salvar lista
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-cancel"
+          id="btn-cancel"
+        >
+          Cancelar
+        </button>
+
+      </div>
+
+    </section>
+
+
+
+<!-- TELA: REALIZAR COMPRA -->
+<section id="screen-purchase" class="screen">
+
+  <div class="editor-heading">
+    <button
+      type="button"
+      class="btn-back"
+      id="btn-purchase-back"
+      aria-label="Voltar para minhas listas"
+    >
+      ←
+    </button>
+
+    <div>
+      <h2 id="purchase-title">Realizar compra</h2>
+      <p>Confira os produtos da sua lista.</p>
+    </div>
+  </div>
+
+  <div class="form-card">
+
+    <div class="purchase-list-heading">
+      <h3 id="purchase-list-name">Minha lista</h3>
+      <span id="purchase-product-count">0 produtos</span>
+    </div>
+
+    <section class="purchase-summary purchase-summary-compact" aria-live="polite">
+      <div class="purchase-summary-heading">
+        <h3>Resumo da compra</h3>
+        <strong class="purchase-total-value">R$ 0,00</strong>
+      </div>
+      <div class="purchase-summary-counts">
+        <span class="purchase-count-bought">Comprados: 0</span>
+        <span class="purchase-count-unavailable">Indisponíveis: 0</span>
+        <span class="purchase-count-not-bought">Não comprados: 0</span>
+      </div>
+    </section>
+
+    <div class="purchase-tabs" role="tablist" aria-label="Situação dos produtos">
+      <button type="button" class="purchase-tab is-active" data-purchase-tab="pendentes" role="tab" aria-selected="true">Pendentes <span id="purchase-count-pending">0</span></button>
+      <button type="button" class="purchase-tab" data-purchase-tab="comprados" role="tab" aria-selected="false">Comprados <span id="purchase-count-bought-tab">0</span></button>
+      <button type="button" class="purchase-tab" data-purchase-tab="nao-comprados" role="tab" aria-selected="false">Não comprados <span id="purchase-count-not-bought-tab">0</span></button>
+    </div>
+    <div id="purchase-products" class="purchase-products">
+
+      <div class="empty-products">
+        Nenhum produto nesta lista.
+      </div>
+
+    </div>
+
+    <button type="button" class="btn btn-primary btn-finish-purchase" id="btn-finish-purchase">Finalizar compra</button>
+
+  </div>
+
+</section>
+
+
+
+    <!-- TELA: HISTÓRICO DE COMPRAS -->
+    <section id="screen-history" class="screen">
+      <div class="editor-heading">
+        <button type="button" class="btn-back" id="btn-history-back" aria-label="Voltar para minhas listas">←</button>
+        <div>
+          <h2>Histórico de compras</h2>
+          <p>Consulte compras finalizadas ou reabra uma para corrigir informações.</p>
+        </div>
+      </div>
+      <div id="history-container" class="history-container"></div>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW:", err)));</script>
+</body>
+</html>
